@@ -49,18 +49,8 @@ const navGroups: NavGroup[] = [
     label: "LinkedIn",
     items: [
       { label: "Profile Optimizer", href: "/optimizer", icon: UserCircle },
-      {
-        label: "Templates",
-        href: "/linkedin/templates",
-        icon: LayoutTemplate,
-        badge: "Soon",
-      },
-      {
-        label: "Performance",
-        href: "/linkedin/performance",
-        icon: BarChart3,
-        badge: "Soon",
-      },
+      { label: "Templates", href: "/linkedin/templates", icon: LayoutTemplate },
+      { label: "Performance", href: "/linkedin/performance", icon: BarChart3 },
     ],
   },
   {

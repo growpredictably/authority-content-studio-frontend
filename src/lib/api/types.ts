@@ -778,3 +778,50 @@ export interface AvailableModel {
   tier_compatibility: string[];
   is_active: boolean;
 }
+
+// ─── Templates (Structure Archetypes) ───────────────────────
+
+export interface StructureArchetype {
+  id: string;
+  type: string;
+  description: string;
+  blueprint: string;
+  content_type: string;
+  usage_count: number;
+  success_rate: number;
+  tags: string[];
+  source: string;
+}
+
+export interface TemplatesListResponse {
+  templates: StructureArchetype[];
+  total: number;
+}
+
+// ─── Performance ────────────────────────────────────────────
+
+export interface LinkedInPostPerformance {
+  post_id: string;
+  content: string;
+  posted_at: string;
+  linkedin_url: string | null;
+  posting_type: string;
+  engagement_likes: number;
+  engagement_comments: number;
+  engagement_shares: number;
+  total_engagement: number;
+}
+
+export interface PerformanceSummary {
+  total_posts: number;
+  total_impressions: number;
+  total_likes: number;
+  total_comments: number;
+  avg_engagement_per_post: number;
+}
+
+export interface PerformanceResponse {
+  linkedin_posts: LinkedInPostPerformance[];
+  content_outcomes: ContentSession[];
+  summary: PerformanceSummary;
+}
