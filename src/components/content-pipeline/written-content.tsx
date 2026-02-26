@@ -13,7 +13,9 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { Check, ChevronDown, Copy, Image } from "lucide-react";
+import { useAuthor } from "@/hooks/use-author";
+import { useSaveSession } from "@/lib/api/hooks/use-content-sessions";
+import { Check, ChevronDown, Copy, Image, Save, Loader2 } from "lucide-react";
 import type {
   WritePostResponse,
   WriteArticleResponse,
@@ -23,7 +25,10 @@ import type {
 
 export function WrittenContent() {
   const { state } = usePipeline();
+  const { author } = useAuthor();
+  const saveSession = useSaveSession();
   const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [imagePromptsOpen, setImagePromptsOpen] = useState(false);
   const [ragOpen, setRagOpen] = useState(false);
 
@@ -70,6 +75,54 @@ export function WrittenContent() {
     setTimeout(() => setCopied(false), 2000);
   }
 
+  function handleSave() {
+    if (!author) return;
+
+    const angleTitle =
+      state.selectedAngle?.title || title || (isPost ? "Post" : "Article");
+
+    saveSession.mutate(
+      {
+        author_id: author.id,
+        user_id: author.user_id,
+        strategy: state.strategy ?? undefined,
+        content_type: state.contentType,
+        title: angleTitle,
+        status: "draft",
+        raw_input: state.rawInput || undefined,
+        selected_angle: state.selectedAngle
+          ? (state.selectedAngle as unknown as Record<string, unknown>)
+          : undefined,
+        outline: state.outline
+          ? (state.outline as unknown as Record<string, unknown>)
+          : undefined,
+        selected_hook: state.selectedHook
+          ? (state.selectedHook as unknown as Record<string, unknown>)
+          : undefined,
+        written_content: state.writtenContent
+          ? (state.writtenContent as unknown as Record<string, unknown>)
+          : undefined,
+        angles_context: state.anglesContext
+          ? (state.anglesContext as unknown as Record<string, unknown>)
+          : undefined,
+        final_content: body || undefined,
+        word_count: wordCount ?? body.split(/\s+/).length,
+      },
+      {
+        onSuccess: () => {
+          setSaved(true);
+          toast.success("Draft saved to My Drafts");
+          setTimeout(() => setSaved(false), 3000);
+        },
+        onError: (err) => {
+          toast.error(
+            err instanceof Error ? err.message : "Failed to save draft"
+          );
+        },
+      }
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -89,19 +142,41 @@ export function WrittenContent() {
             )}
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleCopy}
-          className="gap-1.5"
-        >
-          {copied ? (
-            <Check className="h-3.5 w-3.5" />
-          ) : (
-            <Copy className="h-3.5 w-3.5" />
-          )}
-          {copied ? "Copied" : "Copy"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSave}
+            disabled={saveSession.isPending || saved}
+            className="gap-1.5"
+          >
+            {saveSession.isPending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : saved ? (
+              <Check className="h-3.5 w-3.5" />
+            ) : (
+              <Save className="h-3.5 w-3.5" />
+            )}
+            {saveSession.isPending
+              ? "Saving..."
+              : saved
+                ? "Saved"
+                : "Save Draft"}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCopy}
+            className="gap-1.5"
+          >
+            {copied ? (
+              <Check className="h-3.5 w-3.5" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
+            {copied ? "Copied" : "Copy"}
+          </Button>
+        </div>
       </div>
 
       {/* Content body */}

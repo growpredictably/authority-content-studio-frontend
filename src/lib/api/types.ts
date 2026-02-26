@@ -719,3 +719,62 @@ export interface BrainSearchResponse {
   query: string;
   threshold: number;
 }
+
+// ─── Content Sessions Types ──────────────────────────────────
+
+export interface ContentSession {
+  id: string;
+  author_id: string;
+  user_id: string;
+  strategy?: string;
+  content_type: string;
+  title?: string;
+  status: "draft" | "completed" | "archived";
+  raw_input?: string;
+  selected_angle?: ContentAngle;
+  outline?: GenerateOutlineResponse;
+  selected_hook?: OutlineHook;
+  written_content?: WritePostResponse | WriteArticleResponse;
+  angles_context?: AnglesContext;
+  final_content?: string;
+  word_count?: number;
+  impressions?: number;
+  likes?: number;
+  comments?: number;
+  reposts?: number;
+  published_url?: string;
+  published_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContentSessionListResponse {
+  sessions: ContentSession[];
+  total: number;
+}
+
+export interface OutcomeUpdateRequest {
+  impressions?: number;
+  likes?: number;
+  comments?: number;
+  reposts?: number;
+  published_url?: string;
+}
+
+// ─── Model Settings Types ────────────────────────────────────
+
+export interface ModelPreferences {
+  tier_fast: string;
+  tier_research: string;
+  tier_writing: string;
+}
+
+export interface AvailableModel {
+  model_id: string;
+  display_name: string;
+  provider: string;
+  input_cost_per_1m: number;
+  output_cost_per_1m: number;
+  tier_compatibility: string[];
+  is_active: boolean;
+}
