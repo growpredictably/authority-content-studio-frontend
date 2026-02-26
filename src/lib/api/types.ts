@@ -1,0 +1,369 @@
+/** Standard identifiers required in ALL API payloads */
+export interface ApiIdentifiers {
+  user_id: string;
+  author_id: string;
+  author_name: string;
+  brand_id: string;
+}
+
+/** Optional additional context for API calls */
+export interface ApiContext {
+  archetype?: string;
+  archetype_description?: string;
+  brand_name?: string;
+  packet_id?: string;
+}
+
+/** Health check response */
+export interface HealthResponse {
+  status: string;
+  platform: string;
+  version: string;
+}
+
+/** Author record from authors_dna table */
+export interface Author {
+  id: string;
+  user_id: string;
+  name: string;
+  brand_id?: string;
+  brand_name?: string;
+  archetype?: string;
+  archetype_description?: string;
+}
+
+/** Standard error shape from the backend */
+export interface BackendError {
+  error: string;
+  message: string;
+  details?: string;
+}
+
+// ─── Optimizer Types ─────────────────────────────────────────────
+
+export interface LinkedInExperience {
+  id: string;
+  title: string;
+  company: string;
+  date_range: string;
+  description: string;
+  persona_tag?: "corporate" | "venture" | "legacy";
+  status?: "active" | "archive";
+}
+
+export interface ParsedLinkedInProfile {
+  headline: string | null;
+  about: string | null;
+  experiences: LinkedInExperience[];
+  skills: string[];
+  raw_text: string;
+}
+
+export interface OptimizationSuggestion {
+  id?: string;
+  section: string;
+  current_text: string;
+  proposed_text: string;
+  reasoning: string;
+  confidence: number;
+  drift_score: number;
+  research_sources?: string[];
+  rationale_summary?: string;
+}
+
+export interface PositioningGap {
+  gap: string;
+  recommendation: string;
+  priority: "high" | "medium" | "low";
+  authority_signal: string;
+}
+
+export interface SuggestResponse {
+  success: boolean;
+  suggestions: OptimizationSuggestion[];
+  positioning_gaps?: PositioningGap[];
+}
+
+export interface DriftScanRequest {
+  author_id: string;
+  brand_id?: string;
+  source_content: string;
+  target_section_name: string;
+  enrichment_context?: string;
+  persona_tag?: "corporate" | "venture" | "legacy";
+  persona_goal?: string;
+  enable_research?: boolean;
+}
+
+// ─── Command Center Types ──────────────────────────────────────
+
+export interface ScoreBreakdown {
+  category: string;
+  score: number;
+  max_score: number;
+  raw_value: string;
+  improvement_tip: string;
+}
+
+export interface AuthorityScoreResponse {
+  success: boolean;
+  author_id: string;
+  total_score: number;
+  score_band: "red" | "orange" | "yellow" | "green";
+  breakdown: ScoreBreakdown[];
+  generated_at: string;
+}
+
+export interface SyncAction {
+  action_id: string;
+  action_type: "sync" | "clarify" | "decide";
+  priority: number;
+  headline: string;
+  description: string;
+  prompt: string;
+  theme?: string;
+  packet_id?: string;
+  element_a?: Record<string, unknown>;
+  element_b?: Record<string, unknown>;
+  gap_type?: string;
+  expected_impact?: string;
+  rationale?: string;
+  effort_minutes?: number;
+  impact_delta?: { before: number; after: number } | null;
+}
+
+export interface HabitStats {
+  author_id: string;
+  current_streak: number;
+  longest_streak: number;
+  last_sync_at?: string;
+  total_syncs: number;
+  total_actions_taken: number;
+  sync_actions_taken: number;
+  clarify_actions_taken: number;
+  decide_actions_taken: number;
+  streak_status: "active" | "at_risk" | "broken" | "none";
+  hours_until_streak_break?: number;
+}
+
+export interface DailySyncResponse {
+  success: boolean;
+  author_id: string;
+  session_id: string;
+  actions: SyncAction[];
+  habit_stats: HabitStats;
+  greeting: string;
+  generated_at: string;
+}
+
+export interface ActionCompleteRequest {
+  author_id: string;
+  action_id: string;
+  session_id: string;
+  result: "accepted" | "rejected" | "skipped";
+  user_response?: Record<string, unknown>;
+}
+
+export interface ActionCompleteResponse {
+  success: boolean;
+  action_id: string;
+  result: string;
+  habit_stats: HabitStats;
+  message: string;
+}
+
+export interface LeverageMetrics {
+  ready_packets: number;
+  calibrating_packets: number;
+  draft_themes: number;
+  external_knowledge_count: number;
+  potential_articles: number;
+  potential_posts: number;
+  total_potential_content: number;
+  brain_by_endorsement: Record<string, number>;
+  leverage_message: string;
+}
+
+export interface LeverageResponse {
+  success: boolean;
+  author_id: string;
+  metrics: LeverageMetrics;
+  packet_flow: { total_packets: number; by_stage: Record<string, number> };
+  generated_at: string;
+}
+
+// ─── Content Pipeline Types ────────────────────────────────────
+
+export type ContentStrategy =
+  | "linkedin_posts"
+  | "MarketAnalysis"
+  | "YouTube";
+
+export type PipelineContentType =
+  | "linkedin_post"
+  | "linkedin_article"
+  | "seo_article";
+
+export interface ContentAngle {
+  angle_id?: string;
+  title: string;
+  angle_title?: string;
+  content_type?: string;
+  target_audience?: string;
+  target_metric?: string;
+  strategic_brief?: string;
+  constraint_type?: string;
+  differentiation_score?: number;
+  strategic_passes?: number;
+  hook?: string;
+  strategic_rationale?: string;
+  icp_alignment?: string;
+  summary?: string;
+}
+
+export interface AnglesContext {
+  key_insights?: Array<{
+    id: string;
+    headline: string;
+    description: string;
+    source_quote?: string;
+    selected?: boolean;
+  }>;
+  stories?: unknown[];
+  frameworks?: unknown[];
+  quotes?: unknown[];
+  experience?: unknown[];
+  perspectives?: unknown[];
+  knowledge?: unknown[];
+  external_knowledge?: unknown[];
+  matrix_library?: unknown[];
+  icp_pains?: unknown[];
+  icp_profile?: Record<string, unknown>;
+  tone?: Record<string, unknown>;
+}
+
+export interface GetAnglesResponse {
+  selected_angles: ContentAngle[];
+  context: AnglesContext;
+  session_record_id: string;
+  tracking_id?: string;
+  packet_used?: string;
+}
+
+export interface OutlineHook {
+  id?: string;
+  text: string;
+  type?: string;
+  hook_type?: string;
+  rationale?: string;
+}
+
+export interface OutlineSection {
+  heading?: string;
+  section_type?: string;
+  key_points?: string[];
+  content?: string;
+  purpose?: string;
+  talking_points?: string[];
+  estimated_word_count?: number;
+}
+
+export interface SupportingEvidence {
+  url?: string;
+  title?: string;
+  snippet?: string;
+  stat_summary?: string;
+  content?: string;
+  source?: string;
+  brain_candidate?: boolean;
+}
+
+export interface TemplateRecommendation {
+  template_name?: string;
+  template_content?: string;
+  rationale?: string;
+  match_score?: number;
+}
+
+export interface GenerateOutlineResponse {
+  title: string;
+  hooks: OutlineHook[];
+  sections: OutlineSection[];
+  outline?: OutlineSection[];
+  supporting_evidence?: SupportingEvidence[];
+  cta?: string;
+  recommendations?: TemplateRecommendation[];
+  output_content_type?: string;
+  pattern_analysis?: Record<string, unknown>;
+  estimated_total_words?: number;
+  seo_metadata?: {
+    primary_keyword?: string;
+    secondary_keywords?: string[];
+    serp_analysis?: Record<string, unknown>;
+    meta_description?: string;
+    slug?: string;
+  };
+  packet_used?: string;
+}
+
+export interface RagContext {
+  retrieved_count: number;
+  categories_found: string[];
+  top_similarity: number;
+  error?: string | null;
+  skipped?: boolean;
+}
+
+export interface WritePostResponse {
+  final_post_body: string;
+  post_content?: string;
+  image_prompt?: string;
+  image_prompts?: string[];
+  metadata?: {
+    platform?: string;
+    author_id?: string;
+    tone_used?: string;
+    contentType?: string;
+    rag_context?: RagContext;
+  };
+  packet_used?: string;
+}
+
+export interface GeoScore {
+  generative_engine_visibility: number;
+  content_depth: number;
+  authority_signals: number;
+  overall_score: number;
+}
+
+export interface WriteArticleResponse {
+  final_article_body: string;
+  final_article?: string;
+  content_type?: string;
+  title?: string;
+  image_prompts?: string[];
+  word_count?: number;
+  geo_score?: GeoScore;
+  seo_metadata?: Record<string, unknown>;
+  rich_metadata?: {
+    author?: string;
+    generated_at?: string;
+    rag_context?: RagContext;
+  };
+  metadata?: {
+    rag_context?: RagContext;
+  };
+  packet_used?: string;
+}
+
+export interface ProcessingStatus {
+  tracking_id: string;
+  job_type: string;
+  status: "initializing" | "in_progress" | "completed" | "failed";
+  current_phase: string | null;
+  phase_message: string | null;
+  progress_percent: number;
+  metadata?: Record<string, unknown>;
+  created_at?: string;
+  updated_at?: string;
+}

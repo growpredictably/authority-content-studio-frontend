@@ -1,0 +1,110 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { usePipeline } from "@/lib/content-pipeline/pipeline-context";
+import { useAuthor } from "@/hooks/use-author";
+import { useGetAngles } from "@/lib/api/hooks/use-content-pipeline";
+import { StrategySelector } from "@/components/content-pipeline/strategy-selector";
+import { SourceInput } from "@/components/content-pipeline/source-input";
+import { AnglesResults } from "@/components/content-pipeline/angles-results";
+import { ProgressDisplay } from "@/components/content-pipeline/progress-display";
+import { Card, CardContent } from "@/components/ui/card";
+import { FileText } from "lucide-react";
+import { toast } from "sonner";
+import type { ContentAngle } from "@/lib/api/types";
+
+export default function AnglesPage() {
+  const router = useRouter();
+  const { author } = useAuthor();
+  const { state, setAnglesResult } = usePipeline();
+  const getAngles = useGetAngles();
+  const [progressTrackingId, setProgressTrackingId] = useState<string | null>(
+    null
+  );
+
+  function handleGenerate() {
+    if (!author || !state.strategy) return;
+
+    setProgressTrackingId(null);
+
+    getAngles.mutate(
+      {
+        user_id: author.user_id,
+        author_id: author.id,
+        author_name: author.name,
+        brand_id: author.brand_id || "",
+        strategy: state.strategy,
+        content_type: state.contentType,
+        raw_input: state.rawInput,
+        archetype: author.archetype || "",
+        archetype_description: author.archetype_description || "",
+      },
+      {
+        onSuccess: (data) => {
+          setProgressTrackingId(null);
+          setAnglesResult(
+            data.selected_angles,
+            data.context,
+            data.session_record_id,
+            data.tracking_id
+          );
+          toast.success(
+            `${data.selected_angles.length} angles generated`
+          );
+        },
+        onError: (err) => {
+          setProgressTrackingId(null);
+          toast.error(
+            err instanceof Error ? err.message : "Failed to generate angles"
+          );
+        },
+      }
+    );
+  }
+
+  function handleAngleSelected(angle: ContentAngle) {
+    router.push("/content/outline");
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <FileText className="h-5 w-5" />
+        <h2 className="text-xl font-semibold">Get Angles</h2>
+      </div>
+
+      {!author ? (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              Complete your DNA profile to use the content pipeline.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          <StrategySelector />
+
+          {state.strategy && (
+            <SourceInput
+              onSubmit={handleGenerate}
+              isLoading={getAngles.isPending}
+            />
+          )}
+
+          {getAngles.isPending && (
+            <ProgressDisplay
+              trackingId={progressTrackingId}
+              label="Generating Angles"
+            />
+          )}
+
+          {state.angles.length > 0 && !getAngles.isPending && (
+            <AnglesResults onAngleSelected={handleAngleSelected} />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
