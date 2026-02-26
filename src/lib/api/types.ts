@@ -367,3 +367,132 @@ export interface ProcessingStatus {
   created_at?: string;
   updated_at?: string;
 }
+
+// ─── Authority Intelligence Types ─────────────────────────────
+
+export interface PacketElement {
+  id: string;
+  text: string;
+  title?: string;
+}
+
+export interface PacketResponse {
+  id: string;
+  theme: string;
+  is_complete: boolean;
+  coherence_score: number;
+  readiness_stage: "draft" | "calibrating" | "ready";
+  narrative_logic: string | null;
+  missing_elements: string[];
+  improvement_suggestions: string | null;
+  elements: {
+    anchor_story?: PacketElement;
+    supporting_belief?: PacketElement;
+    framework?: PacketElement;
+    perspective?: PacketElement;
+  };
+}
+
+export interface PacketsListResponse {
+  packets: PacketResponse[];
+  summary: {
+    total: number;
+    complete: number;
+    incomplete: number;
+  };
+}
+
+export interface CategoryUtilization {
+  used: number;
+  total: number;
+  utilization: number;
+}
+
+export interface PacketGap {
+  packet_id: string;
+  theme: string;
+  coherence_score: number;
+  gap_type: string;
+  blocking_element: string;
+  diagnosis: string;
+  voice_builder_prompt: string;
+  expected_impact: string;
+  expected_coherence: number;
+  priority: string;
+  prediction_confidence?: number;
+  brain_candidates: unknown[];
+  has_unlinked_knowledge: boolean;
+}
+
+export interface ContentPriority {
+  priority: number;
+  focus_area: string;
+  rationale: string;
+  voice_builder_prompt: string;
+  expected_packets_improved: number;
+  expected_coherence_lift: number;
+  expected_new_packets?: number;
+}
+
+export interface PotentialTheme {
+  theme: string;
+  readiness: number;
+  existing_elements: Record<string, number>;
+  blocking_gap: string;
+  voice_builder_prompt: string;
+  expected_coherence: number;
+}
+
+export interface GapAnalysisResponse {
+  author_id: string;
+  packets_built: number;
+  dna_utilization: {
+    overall: number;
+    overall_used: number;
+    overall_total: number;
+    by_category: {
+      story: CategoryUtilization;
+      belief: CategoryUtilization;
+      framework: CategoryUtilization;
+      perspective: CategoryUtilization;
+    };
+  };
+  packet_gaps: PacketGap[];
+  content_priorities: ContentPriority[];
+  potential_themes: PotentialTheme[];
+  summary: {
+    high_priority_actions: number;
+    packets_improvable: number;
+    new_packets_potential: number;
+    estimated_utilization_after_fixes: number;
+    groups: {
+      quick_wins: number;
+      strategic: number;
+      polish: number;
+    };
+  };
+  grouped_gaps: {
+    quick_wins: PacketGap[];
+    strategic: PacketGap[];
+    polish: PacketGap[];
+  };
+}
+
+export interface RemediateGapRequest {
+  author_id: string;
+  gap_action_id: string;
+  content: string;
+  source: string;
+}
+
+export interface RemediateGapResponse {
+  success: boolean;
+  gap_action_id: string;
+  packet_id: string;
+  elements_extracted: Record<string, number>;
+  coherence_before: number;
+  coherence_after: number;
+  is_complete: boolean;
+  gap_resolved: boolean;
+  message: string;
+}
