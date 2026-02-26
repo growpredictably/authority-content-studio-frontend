@@ -496,3 +496,226 @@ export interface RemediateGapResponse {
   gap_resolved: boolean;
   message: string;
 }
+
+// ─── Voice Builder Types ──────────────────────────────────────
+
+export interface VoiceMiningRequest {
+  source_type: "text" | "youtube" | "gdoc" | "gsheet";
+  content: string;
+  author_id: string;
+  user_id: string;
+  extraction_focus: ("stories" | "beliefs" | "patterns")[];
+}
+
+export interface VoiceMiningResponse {
+  job_id: string;
+  status: "processing";
+}
+
+export interface MiningJobStatus {
+  job_id: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  current_phase?: string;
+  progress_percent: number;
+  result?: Record<string, unknown>;
+  error?: string;
+}
+
+export interface ExtractedStory {
+  id?: string;
+  internal_title?: string;
+  narrative_arc: {
+    title?: string;
+    the_setup: string;
+    the_conflict: string;
+    the_resolution: string;
+    lesson?: string;
+  };
+  metadata?: {
+    capture_date?: string;
+    source_type?: string;
+    themes?: string[];
+    emotional_intensity?: string;
+    narrative_type?: string;
+    time_period?: string;
+    key_entities?: string[];
+  };
+}
+
+export interface ExtractedBelief {
+  id?: string;
+  belief_statement: string;
+  why_it_matters: string;
+  evidence?: string;
+  metadata?: {
+    conviction_level?: string;
+    time_consistency?: string;
+    supports_frameworks?: string[];
+    related_stories?: string[];
+  };
+}
+
+export interface ExtractedPattern {
+  id?: string;
+  pattern_name: string;
+  description: string;
+  examples: string[];
+  metadata?: {
+    frequency?: string;
+    context_sensitivity?: string;
+    formality_level?: string;
+    emotional_valence?: string;
+    use_when?: string;
+    avoid_when?: string;
+  };
+}
+
+export interface ExtractedFramework {
+  id?: string;
+  name: string;
+  description: string;
+  steps?: string[];
+  metadata?: {
+    themes?: string[];
+    domain?: string;
+  };
+}
+
+export interface ExtractedPerspective {
+  id?: string;
+  label: string;
+  stance: string;
+  domain?: string;
+  metadata?: {
+    themes?: string[];
+  };
+}
+
+export interface VoiceIngestData {
+  stories?: ExtractedStory[];
+  beliefs?: ExtractedBelief[];
+  patterns?: ExtractedPattern[];
+  frameworks?: ExtractedFramework[];
+  perspectives?: ExtractedPerspective[];
+  quotes?: unknown[];
+  tone?: unknown[];
+  experience?: unknown[];
+  knowledge?: unknown[];
+  preferences?: unknown[];
+}
+
+export interface IngestConflict {
+  conflict_type: "semantic_duplicate" | "contradiction" | "tone_drift";
+  severity: "high" | "medium" | "low";
+  item_type: string;
+  reason: string;
+  suggested_action: string;
+  new_item_summary: { type: string; id: string; title: string };
+  existing_item_summary: { type: string; id: string; title: string };
+}
+
+export interface VoiceIngestResponse {
+  success: true;
+  stats: {
+    categories_updated: string[];
+    db_result: Record<string, unknown>;
+    rag_result: Record<string, unknown>;
+    conflicts_checked: boolean;
+    conflicts_found: number;
+  };
+}
+
+export interface VoiceIngestConflictResponse {
+  status: "requires_confirmation";
+  conflicts: IngestConflict[];
+}
+
+export interface ConflictResolution {
+  conflict_index: number;
+  action: "merge" | "skip" | "force";
+}
+
+// ─── Brain Builder Types ──────────────────────────────────────
+
+export interface BrainCandidate {
+  temp_id: string;
+  type: "framework" | "myth" | "truth" | "statistic";
+  title: string;
+  summary: string;
+  key_quotes: string[];
+  suggested_tags: string[];
+}
+
+export interface BrainCurateResponse {
+  source_metadata: {
+    url: string;
+    title?: string;
+    description?: string;
+    author?: string;
+  };
+  candidates: BrainCandidate[];
+}
+
+export interface BrainCommitItem {
+  title: string;
+  summary: string;
+  key_quotes: string[];
+  tactical_application?: string;
+  endorsement_level: "full" | "partial" | "anti_model" | "reference";
+  user_notes?: string;
+  strategic_tags: string[];
+  source_url?: string;
+  source_title?: string;
+  source_author?: string;
+  source_type?: "article" | "book" | "video" | "paper";
+}
+
+export interface ExternalKnowledge {
+  id: string;
+  author_id: string;
+  connection_id: string;
+  source_url?: string;
+  source_title: string;
+  source_author?: string;
+  source_type: string;
+  title: string;
+  summary: string;
+  key_quotes: string[];
+  tactical_application?: string;
+  endorsement_level: "full" | "partial" | "anti_model" | "reference";
+  user_notes?: string;
+  strategic_tags: string[];
+  cluster_id?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BrainCommitResponse {
+  success: boolean;
+  committed_count: number;
+  connection_id: string;
+  items: ExternalKnowledge[];
+}
+
+export interface BrainLibraryResponse {
+  author_id: string;
+  total_count: number;
+  items: ExternalKnowledge[];
+  by_endorsement: {
+    full: number;
+    partial: number;
+    anti_model: number;
+    reference: number;
+  };
+}
+
+export interface BrainSearchResult {
+  knowledge: ExternalKnowledge;
+  similarity: number;
+}
+
+export interface BrainSearchResponse {
+  results: BrainSearchResult[];
+  query: string;
+  threshold: number;
+}

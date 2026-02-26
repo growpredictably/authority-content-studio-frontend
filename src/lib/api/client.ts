@@ -105,6 +105,28 @@ export async function apiPut<T>(
   return res.json();
 }
 
+/** PATCH request to the Modal backend with Bearer token auth */
+export async function apiPatch<T>(
+  endpoint: string,
+  payload: Record<string, unknown>,
+  token: string
+): Promise<T> {
+  const res = await fetch(`${BACKEND_URL}${endpoint}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new ApiError(res.status, await res.text());
+  }
+
+  return res.json();
+}
+
 /** Unauthenticated GET (for health check) */
 export async function apiGetPublic<T>(endpoint: string): Promise<T> {
   const res = await fetch(`${BACKEND_URL}${endpoint}`, {
