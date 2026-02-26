@@ -7,8 +7,11 @@ import {
   LayoutDashboard,
   Sparkles,
   PenTool,
-  FileText,
-  BookOpen,
+  FolderOpen,
+  UserCircle,
+  LayoutTemplate,
+  BarChart3,
+  TrendingUp,
   Package,
   Target,
   Mic,
@@ -16,55 +19,87 @@ import {
   Settings,
 } from "lucide-react";
 
-const navItems = [
+interface NavItem {
+  label: string;
+  href: string;
+  icon: typeof LayoutDashboard;
+  badge?: string;
+}
+
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+const navGroups: NavGroup[] = [
   {
-    label: "Command Center",
-    href: "/",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Optimizer",
-    href: "/optimizer",
-    icon: Sparkles,
-  },
-  {
-    label: "Content Pipeline",
-    icon: PenTool,
-    children: [
-      { label: "Angles", href: "/content/angles", icon: FileText },
-      { label: "Outline", href: "/content/outline", icon: BookOpen },
-      { label: "Write", href: "/content/write", icon: PenTool },
+    label: "",
+    items: [
+      { label: "Command Center", href: "/", icon: LayoutDashboard },
     ],
   },
   {
-    label: "Authority Packets",
-    href: "/authority/packets",
-    icon: Package,
+    label: "Create & Publish",
+    items: [
+      { label: "New Content", href: "/content/angles", icon: PenTool },
+      { label: "My Drafts", href: "/content/drafts", icon: FolderOpen },
+    ],
   },
   {
-    label: "Gap Analysis",
-    href: "/authority/gaps",
-    icon: Target,
+    label: "LinkedIn",
+    items: [
+      { label: "Profile Optimizer", href: "/optimizer", icon: UserCircle },
+      {
+        label: "Templates",
+        href: "/linkedin/templates",
+        icon: LayoutTemplate,
+        badge: "Soon",
+      },
+      {
+        label: "Performance",
+        href: "/linkedin/performance",
+        icon: BarChart3,
+        badge: "Soon",
+      },
+    ],
   },
   {
-    label: "Voice Builder",
-    href: "/voice",
-    icon: Mic,
+    label: "Authority Engine",
+    items: [
+      { label: "Overview", href: "/authority/overview", icon: TrendingUp },
+      { label: "Authority Packets", href: "/authority/packets", icon: Package },
+      { label: "Gap Analysis", href: "/authority/gaps", icon: Target },
+    ],
   },
   {
-    label: "Brain Builder",
-    href: "/brain",
-    icon: Brain,
+    label: "Foundation",
+    items: [
+      { label: "Voice DNA", href: "/voice", icon: Mic },
+      { label: "Brain Builder", href: "/brain", icon: Brain },
+    ],
   },
   {
-    label: "Settings",
-    href: "/settings",
-    icon: Settings,
+    label: "",
+    items: [{ label: "Settings", href: "/settings", icon: Settings }],
   },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+
+  function isActive(href: string) {
+    if (href === "/") return pathname === "/";
+    return pathname === href || pathname.startsWith(href + "/");
+  }
+
+  // Content pipeline pages (angles/outline/write) highlight "New Content"
+  function isContentActive() {
+    return (
+      pathname.startsWith("/content/angles") ||
+      pathname.startsWith("/content/outline") ||
+      pathname.startsWith("/content/write")
+    );
+  }
 
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col md:border-r md:bg-sidebar md:text-sidebar-foreground">
@@ -74,48 +109,42 @@ export function Sidebar() {
           <span>Authority Studio</span>
         </Link>
       </div>
-      <nav className="flex-1 space-y-1 p-3">
-        {navItems.map((item) => {
-          if (item.children) {
-            return (
-              <div key={item.label} className="space-y-1">
-                <div className="flex items-center gap-2 px-3 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </div>
-                {item.children.map((child) => (
-                  <Link
-                    key={child.href}
-                    href={child.href}
-                    className={cn(
-                      "flex items-center gap-2 rounded-md px-3 py-2 pl-9 text-sm transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                      pathname === child.href &&
-                        "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                    )}
-                  >
-                    <child.icon className="h-4 w-4" />
-                    {child.label}
-                  </Link>
-                ))}
-              </div>
-            );
-          }
+      <nav className="flex-1 overflow-y-auto p-3 space-y-4">
+        {navGroups.map((group) => (
+          <div key={group.label || "top"} className="space-y-0.5">
+            {group.label && (
+              <p className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {group.label}
+              </p>
+            )}
+            {group.items.map((item) => {
+              const active =
+                item.href === "/content/angles"
+                  ? isContentActive()
+                  : isActive(item.href);
 
-          return (
-            <Link
-              key={item.href}
-              href={item.href!}
-              className={cn(
-                "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                pathname === item.href &&
-                  "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-              )}
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          );
-        })}
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                    active &&
+                      "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  <span className="flex-1">{item.label}</span>
+                  {item.badge && (
+                    <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
     </aside>
   );
