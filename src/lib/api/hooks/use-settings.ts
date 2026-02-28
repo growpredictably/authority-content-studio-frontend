@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { apiGet, apiPut } from "@/lib/api/client";
+import { apiGet, apiPut, apiUpload } from "@/lib/api/client";
 import type { ModelPreferences, AvailableModel } from "@/lib/api/types";
 
 async function getToken(): Promise<string> {
@@ -68,6 +68,34 @@ export function useUpdateModelPreferences() {
       );
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["model-preferences"] });
+    },
+  });
+}
+
+export interface CsvUploadResult {
+  rows_processed: number;
+  rows_upserted: number;
+  rows_deactivated: number;
+  errors: string[];
+}
+
+/** Upload a CSV file to bulk upsert available models. */
+export function useUploadModelsCsv() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (file: File) => {
+      const token = await getToken();
+      const formData = new FormData();
+      formData.append("file", file);
+      return apiUpload<CsvUploadResult>(
+        "/v1/models/upload-csv",
+        formData,
+        token
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["available-models"] });
       queryClient.invalidateQueries({ queryKey: ["model-preferences"] });
     },
   });

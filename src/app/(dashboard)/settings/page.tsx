@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -19,7 +19,18 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { Settings, User, Palette, Cpu, Database, Loader2, Check } from "lucide-react";
+import {
+  Settings,
+  User,
+  Palette,
+  Cpu,
+  Database,
+  Loader2,
+  Check,
+  Upload,
+  Download,
+  AlertCircle,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { useAuthor } from "@/hooks/use-author";
@@ -28,6 +39,7 @@ import {
   useModelPreferences,
   useAvailableModels,
   useUpdateModelPreferences,
+  useUploadModelsCsv,
 } from "@/lib/api/hooks/use-settings";
 import {
   useSnapshotCacheTtl,
@@ -50,6 +62,9 @@ export default function SettingsPage() {
   const [writing, setWriting] = useState("");
   const [prefsSaved, setPrefsSaved] = useState(false);
   const [cacheSaved, setCacheSaved] = useState(false);
+  const uploadCsv = useUploadModelsCsv();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     if (prefsData?.preferences) {
@@ -295,6 +310,8 @@ export default function SettingsPage() {
                 <SelectItem value="12">12 hours</SelectItem>
                 <SelectItem value="24">24 hours</SelectItem>
                 <SelectItem value="48">48 hours</SelectItem>
+                <SelectItem value="72">72 hours (3 days)</SelectItem>
+                <SelectItem value="168">168 hours (1 week)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -303,6 +320,190 @@ export default function SettingsPage() {
               <Check className="h-3 w-3" /> Saved
             </p>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Model Registry (Admin) */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Upload className="h-4 w-4" />
+            <CardTitle className="text-sm">Model Registry</CardTitle>
+          </div>
+          <CardDescription>
+            Upload a CSV to add or update available AI models and pricing.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Upload zone */}
+          <div
+            className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer ${
+              isDragging
+                ? "border-primary bg-primary/5"
+                : "border-muted-foreground/25 hover:border-muted-foreground/50"
+            }`}
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragging(false);
+              const file = e.dataTransfer.files[0];
+              if (file?.name.endsWith(".csv")) {
+                uploadCsv.mutate(file, {
+                  onSuccess: (data) => {
+                    toast.success(
+                      `${data.rows_upserted} model(s) upserted, ${data.rows_deactivated} deactivated`
+                    );
+                    if (data.errors.length > 0) {
+                      toast.warning(`${data.errors.length} row(s) had errors`);
+                    }
+                  },
+                  onError: (err) =>
+                    toast.error(
+                      err instanceof Error ? err.message : "Upload failed"
+                    ),
+                });
+              } else {
+                toast.error("Please upload a .csv file");
+              }
+            }}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  uploadCsv.mutate(file, {
+                    onSuccess: (data) => {
+                      toast.success(
+                        `${data.rows_upserted} model(s) upserted, ${data.rows_deactivated} deactivated`
+                      );
+                      if (data.errors.length > 0) {
+                        toast.warning(
+                          `${data.errors.length} row(s) had errors`
+                        );
+                      }
+                    },
+                    onError: (err) =>
+                      toast.error(
+                        err instanceof Error ? err.message : "Upload failed"
+                      ),
+                  });
+                }
+                e.target.value = "";
+              }}
+            />
+            {uploadCsv.isPending ? (
+              <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+            ) : (
+              <Upload className="h-6 w-6 mx-auto text-muted-foreground" />
+            )}
+            <p className="text-sm text-muted-foreground mt-2">
+              {uploadCsv.isPending
+                ? "Uploading..."
+                : "Drop a CSV here or click to browse"}
+            </p>
+          </div>
+
+          {/* Upload result */}
+          {uploadCsv.data && (
+            <div className="rounded-md border p-3 space-y-1 text-xs">
+              <p>
+                <span className="font-medium">{uploadCsv.data.rows_upserted}</span> upserted,{" "}
+                <span className="font-medium">{uploadCsv.data.rows_deactivated}</span> deactivated
+              </p>
+              {uploadCsv.data.errors.length > 0 && (
+                <div className="space-y-0.5 text-destructive">
+                  {uploadCsv.data.errors.map((err, i) => (
+                    <p key={i} className="flex items-start gap-1">
+                      <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+                      {err}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Download template */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-xs"
+            onClick={() => {
+              const header =
+                "model_id,display_name,provider,input_cost_per_1m,output_cost_per_1m,tier_compatibility,is_active";
+              const example =
+                "gpt-5-nano,GPT-5 Nano,openai,0.05,0.40,fast;research,true";
+              const blob = new Blob([header + "\n" + example + "\n"], {
+                type: "text/csv",
+              });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "models_template.csv";
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            <Download className="h-3 w-3" />
+            Download Template CSV
+          </Button>
+
+          <Separator />
+
+          {/* Current models table */}
+          <div>
+            <p className="text-xs font-medium mb-2">
+              Current Models ({models.length})
+            </p>
+            <div className="rounded-md border overflow-hidden">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-muted/50">
+                    <th className="text-left p-2 font-medium">Model</th>
+                    <th className="text-left p-2 font-medium">Provider</th>
+                    <th className="text-right p-2 font-medium">In / Out</th>
+                    <th className="text-left p-2 font-medium">Tiers</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {models.map((m) => (
+                    <tr key={m.model_id} className="border-t">
+                      <td className="p-2 font-medium">{m.display_name}</td>
+                      <td className="p-2 text-muted-foreground">
+                        {m.provider}
+                      </td>
+                      <td className="p-2 text-right tabular-nums text-muted-foreground">
+                        ${m.input_cost_per_1m.toFixed(2)} / $
+                        {m.output_cost_per_1m.toFixed(2)}
+                      </td>
+                      <td className="p-2">
+                        <div className="flex gap-0.5">
+                          {m.tier_compatibility.map((t) => (
+                            <Badge
+                              key={t}
+                              variant="outline"
+                              className="text-[9px]"
+                            >
+                              {t}
+                            </Badge>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
