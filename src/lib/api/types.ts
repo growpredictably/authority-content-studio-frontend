@@ -424,6 +424,16 @@ export interface CategoryUtilization {
   utilization: number;
 }
 
+/** Brain candidate from gap analysis (distinct from Brain Builder's BrainCandidate) */
+export interface GapBrainCandidate {
+  knowledge_id: string;
+  title: string;
+  summary: string;
+  endorsement_level: "full" | "partial" | "anti_model" | "reference";
+  similarity: number;
+  source_title?: string;
+}
+
 export interface PacketGap {
   packet_id: string;
   theme: string;
@@ -436,7 +446,7 @@ export interface PacketGap {
   expected_coherence: number;
   priority: string;
   prediction_confidence?: number;
-  brain_candidates: unknown[];
+  brain_candidates: GapBrainCandidate[];
   has_unlinked_knowledge: boolean;
   gap_action_id?: string;
 }

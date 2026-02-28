@@ -18,6 +18,7 @@ import {
   Wrench,
 } from "lucide-react";
 import type { PacketGap } from "@/lib/api/types";
+import { BrainCandidatesSection } from "./brain-candidates-section";
 
 interface GapActionCardProps {
   gap: PacketGap;
@@ -75,6 +76,10 @@ export function GapActionCard({
         <p className="text-xs text-muted-foreground line-clamp-2">
           {gap.diagnosis}
         </p>
+
+        {gap.has_unlinked_knowledge && gap.brain_candidates.length > 0 && (
+          <BrainCandidatesSection candidates={gap.brain_candidates} />
+        )}
 
         <Collapsible open={promptOpen} onOpenChange={setPromptOpen}>
           <CollapsibleTrigger asChild>

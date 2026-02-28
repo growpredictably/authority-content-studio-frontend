@@ -5,12 +5,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Link2, Lightbulb, MessageSquare, ArrowRight } from "lucide-react";
+import { Link2, Lightbulb, MessageSquare, ArrowRight, Zap, Minus, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useCompleteAction } from "@/lib/api/hooks/use-command-center";
+import { useCompleteAction, useSaveAction } from "@/lib/api/hooks/use-command-center";
+import { ClarifyActionDrawer } from "./clarify-action-drawer";
 import type { SyncAction } from "@/lib/api/types";
 
 const typeConfig = {
@@ -44,13 +44,23 @@ export function SyncCard({
   sessionId,
   onCompleted,
 }: SyncCardProps) {
-  const [showTextarea, setShowTextarea] = useState(false);
-  const [answerText, setAnswerText] = useState("");
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [resolved, setResolved] = useState(false);
 
   const completeAction = useCompleteAction();
+  const saveAction = useSaveAction();
   const config = typeConfig[action.action_type];
   const Icon = config.icon;
+
+  function handleSave() {
+    saveAction.mutate(
+      { author_id: authorId, action_payload: action },
+      {
+        onSuccess: () => toast.success("Saved for later"),
+        onError: () => toast.error("Failed to save"),
+      }
+    );
+  }
 
   function handleComplete(
     result: "accepted" | "rejected" | "skipped",
@@ -90,11 +100,37 @@ export function SyncCard({
         >
           <Card className="h-full">
             <CardContent className="pt-6 space-y-3">
-              {/* Badge */}
-              <Badge className={cn("text-xs", config.color)}>
-                <Icon className="h-3 w-3 mr-1" />
-                {config.label}
-              </Badge>
+              {/* Domain + Impact badges + Save */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Badge className={cn("text-xs", config.color)}>
+                    <Icon className="h-3 w-3 mr-1" />
+                    {config.label}
+                  </Badge>
+                  {action.priority <= 1 && (
+                    <Badge variant="outline" className="text-xs text-orange-600 border-orange-200 dark:border-orange-800 dark:text-orange-400">
+                      <Zap className="h-3 w-3 mr-0.5" />
+                      High Impact
+                    </Badge>
+                  )}
+                  {action.priority === 2 && (
+                    <Badge variant="outline" className="text-xs text-muted-foreground">
+                      <Minus className="h-3 w-3 mr-0.5" />
+                      Med
+                    </Badge>
+                  )}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 text-muted-foreground hover:text-primary"
+                  onClick={handleSave}
+                  disabled={saveAction.isPending}
+                  title="Save for later"
+                >
+                  <Bookmark className="h-3.5 w-3.5" />
+                </Button>
+              </div>
 
               {/* Headline */}
               <p className="text-sm font-medium leading-snug">
@@ -155,57 +191,37 @@ export function SyncCard({
               )}
 
               {action.action_type === "clarify" && (
-                <div className="space-y-2">
-                  {showTextarea ? (
-                    <>
-                      <Textarea
-                        value={answerText}
-                        onChange={(e) => setAnswerText(e.target.value)}
-                        placeholder="Type your answer..."
-                        rows={3}
-                      />
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            handleComplete("accepted", {
-                              answer: answerText,
-                            })
-                          }
-                          disabled={isActioning || !answerText.trim()}
-                          className="flex-1"
-                        >
-                          Submit
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setShowTextarea(false)}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => setShowTextarea(true)}
-                        disabled={isActioning}
-                        className="flex-1"
-                      >
-                        Answer Now
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleComplete("skipped")}
-                        disabled={isActioning}
-                      >
-                        Skip
-                      </Button>
-                    </div>
-                  )}
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => setDrawerOpen(true)}
+                    disabled={isActioning}
+                    className="flex-1"
+                  >
+                    Answer Now
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleComplete("skipped")}
+                    disabled={isActioning}
+                  >
+                    Skip
+                  </Button>
+                  <ClarifyActionDrawer
+                    action={action}
+                    open={drawerOpen}
+                    onOpenChange={setDrawerOpen}
+                    onSubmit={(answer) => {
+                      handleComplete("accepted", { answer });
+                      setDrawerOpen(false);
+                    }}
+                    onSkip={() => {
+                      handleComplete("skipped");
+                      setDrawerOpen(false);
+                    }}
+                    isPending={isActioning}
+                  />
                 </div>
               )}
 

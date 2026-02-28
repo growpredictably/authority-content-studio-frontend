@@ -30,6 +30,9 @@ import Link from "next/link";
 import { AuthorityScore } from "@/components/command-center/authority-score";
 import { QuickStats } from "@/components/command-center/quick-stats";
 import { DailySyncCards } from "@/components/command-center/daily-sync-cards";
+import { AssetLeverageCard } from "@/components/command-center/asset-leverage-card";
+import { ActiveRadarCard } from "@/components/command-center/active-radar-card";
+import { SavedItemsDrawer } from "@/components/command-center/saved-items-drawer";
 
 const quickLinks = [
   {
@@ -141,7 +144,10 @@ export default function CommandCenterPage() {
                 : "Welcome to Authority Content Studio"}
           </p>
         </div>
-        <BackendStatus />
+        <div className="flex items-center gap-2">
+          {author && <SavedItemsDrawer authorId={author.id} />}
+          <BackendStatus />
+        </div>
       </div>
 
       {author ? (
@@ -152,8 +158,14 @@ export default function CommandCenterPage() {
           {/* Quick Stats Row */}
           <QuickStats authorId={author.id} />
 
+          {/* Asset Leverage */}
+          <AssetLeverageCard authorId={author.id} />
+
           {/* Daily Sync Cards */}
           <DailySyncCards authorId={author.id} />
+
+          {/* Active Radar */}
+          <ActiveRadarCard authorId={author.id} />
         </>
       ) : (
         !isLoading && (

@@ -146,6 +146,7 @@ export default function PacketsPage() {
 
       <PacketDetailDialog
         packet={selectedPacket}
+        authorId={author?.id ?? ""}
         open={!!selectedPacket}
         onOpenChange={(open) => !open && setSelectedPacket(null)}
       />

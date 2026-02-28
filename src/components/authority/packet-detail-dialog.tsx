@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -7,13 +8,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Wrench } from "lucide-react";
 import { CoherenceGauge } from "./coherence-gauge";
 import { ReadinessBadge } from "./readiness-badge";
+import { PacketFixDrawer } from "./packet-fix-drawer";
 import type { PacketResponse } from "@/lib/api/types";
 
 interface PacketDetailDialogProps {
   packet: PacketResponse | null;
+  authorId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -31,9 +36,12 @@ const elementLabels: {
 
 export function PacketDetailDialog({
   packet,
+  authorId,
   open,
   onOpenChange,
 }: PacketDetailDialogProps) {
+  const [fixDrawerOpen, setFixDrawerOpen] = useState(false);
+
   if (!packet) return null;
 
   return (
@@ -57,6 +65,17 @@ export function PacketDetailDialog({
                 {packet.is_complete ? "Complete" : "Incomplete"} packet
               </p>
             </div>
+            {!packet.is_complete && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="ml-auto gap-1.5"
+                onClick={() => setFixDrawerOpen(true)}
+              >
+                <Wrench className="h-3.5 w-3.5" />
+                Fix Missing Elements
+              </Button>
+            )}
           </div>
 
           {packet.narrative_logic && (
@@ -145,6 +164,14 @@ export function PacketDetailDialog({
           )}
         </div>
       </DialogContent>
+
+      <PacketFixDrawer
+        packetId={packet.id}
+        packetTheme={packet.theme}
+        authorId={authorId}
+        open={fixDrawerOpen}
+        onOpenChange={setFixDrawerOpen}
+      />
     </Dialog>
   );
 }

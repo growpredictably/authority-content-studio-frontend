@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CalendarCheck } from "lucide-react";
+import { CalendarCheck, CheckCircle2 } from "lucide-react";
 import { useDailySync } from "@/lib/api/hooks/use-command-center";
 import { StreakDisplay } from "./streak-display";
 import { SyncCard } from "./sync-card";
@@ -101,10 +102,22 @@ export function DailySyncCards({ authorId }: DailySyncCardsProps) {
           </div>
         )}
 
-        {completedIds.size > 0 && activeActions.length > 0 && (
-          <p className="mt-3 text-xs text-muted-foreground">
-            {completedIds.size} of {data.actions.length} actions completed
-          </p>
+        {completedIds.size > 0 && data.actions.length > 0 && (
+          <div className="mt-4 space-y-1.5">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                {completedIds.size} of {data.actions.length} actions completed
+              </span>
+              <span className="tabular-nums font-medium">
+                {Math.round((completedIds.size / data.actions.length) * 100)}%
+              </span>
+            </div>
+            <Progress
+              value={(completedIds.size / data.actions.length) * 100}
+              className="h-2"
+            />
+          </div>
         )}
       </CardContent>
     </Card>
