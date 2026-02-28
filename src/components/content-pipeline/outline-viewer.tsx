@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { usePipeline } from "@/lib/content-pipeline/pipeline-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Collapsible,
   CollapsibleContent,
@@ -12,13 +13,25 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import {
+  ArrowUp,
+  ArrowDown,
   ChevronDown,
   ExternalLink,
   Loader2,
   PenTool,
+  Plus,
   Sparkles,
+  Trash2,
+  X,
+  LayoutTemplate,
+  Check,
 } from "lucide-react";
-import type { OutlineHook } from "@/lib/api/types";
+import type {
+  OutlineHook,
+  OutlineSection,
+  GenerateOutlineResponse,
+  TemplateRecommendation,
+} from "@/lib/api/types";
 
 interface OutlineViewerProps {
   onWrite: () => void;
@@ -26,16 +39,79 @@ interface OutlineViewerProps {
 }
 
 export function OutlineViewer({ onWrite, isWriting }: OutlineViewerProps) {
-  const { state, selectHook } = usePipeline();
+  const { state, selectHook, setEditedOutline, selectTemplate } = usePipeline();
   const [evidenceOpen, setEvidenceOpen] = useState(false);
 
   if (!state.outline) return null;
 
-  const outline = state.outline;
+  const outline = state.editedOutline ?? state.outline;
   const sections = outline.sections?.length
     ? outline.sections
     : outline.outline ?? [];
   const isPost = state.contentType === "linkedin_post";
+
+  // ─── Editing helpers ─────────────────────────────────────────
+
+  function updateOutline(updater: (prev: GenerateOutlineResponse) => GenerateOutlineResponse) {
+    const current = state.editedOutline ?? { ...state.outline! };
+    setEditedOutline(updater(current));
+  }
+
+  function updateSection(idx: number, updated: OutlineSection) {
+    updateOutline((prev) => {
+      const arr = [...(prev.sections?.length ? prev.sections : prev.outline ?? [])];
+      arr[idx] = updated;
+      return { ...prev, sections: arr };
+    });
+  }
+
+  function removeSection(idx: number) {
+    updateOutline((prev) => {
+      const arr = [...(prev.sections?.length ? prev.sections : prev.outline ?? [])];
+      arr.splice(idx, 1);
+      return { ...prev, sections: arr };
+    });
+  }
+
+  function moveSection(idx: number, direction: -1 | 1) {
+    const target = idx + direction;
+    if (target < 0 || target >= sections.length) return;
+    updateOutline((prev) => {
+      const arr = [...(prev.sections?.length ? prev.sections : prev.outline ?? [])];
+      [arr[idx], arr[target]] = [arr[target], arr[idx]];
+      return { ...prev, sections: arr };
+    });
+  }
+
+  function addSection() {
+    updateOutline((prev) => {
+      const arr = [...(prev.sections?.length ? prev.sections : prev.outline ?? [])];
+      arr.push({ heading: "New Section", key_points: ["Key point"] });
+      return { ...prev, sections: arr };
+    });
+  }
+
+  function updateKeyPoint(sectionIdx: number, pointIdx: number, value: string) {
+    const section = sections[sectionIdx];
+    const points = [...(section.key_points || [])];
+    points[pointIdx] = value;
+    updateSection(sectionIdx, { ...section, key_points: points });
+  }
+
+  function removeKeyPoint(sectionIdx: number, pointIdx: number) {
+    const section = sections[sectionIdx];
+    const points = [...(section.key_points || [])];
+    points.splice(pointIdx, 1);
+    updateSection(sectionIdx, { ...section, key_points: points });
+  }
+
+  function addKeyPoint(sectionIdx: number) {
+    const section = sections[sectionIdx];
+    const points = [...(section.key_points || []), ""];
+    updateSection(sectionIdx, { ...section, key_points: points });
+  }
+
+  // ─── Render ──────────────────────────────────────────────────
 
   return (
     <div className="space-y-4">
@@ -74,8 +150,7 @@ export function OutlineViewer({ onWrite, isWriting }: OutlineViewerProps) {
           <h4 className="text-sm font-medium">Choose a Hook</h4>
           <div className="grid gap-2 sm:grid-cols-2">
             {outline.hooks.map((hook, idx) => {
-              const isSelected =
-                state.selectedHook?.text === hook.text;
+              const isSelected = state.selectedHook?.text === hook.text;
               return (
                 <Card
                   key={hook.id || idx}
@@ -107,7 +182,7 @@ export function OutlineViewer({ onWrite, isWriting }: OutlineViewerProps) {
         </div>
       )}
 
-      {/* Sections */}
+      {/* Editable sections */}
       {sections.length > 0 && (
         <div className="space-y-2">
           <h4 className="text-sm font-medium">Outline Sections</h4>
@@ -115,15 +190,49 @@ export function OutlineViewer({ onWrite, isWriting }: OutlineViewerProps) {
             {sections.map((section, idx) => (
               <Card key={idx}>
                 <CardContent className="pt-4 pb-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">
-                      {section.heading || section.section_type || `Section ${idx + 1}`}
-                    </p>
-                    {section.estimated_word_count && (
-                      <span className="text-xs text-muted-foreground">
-                        ~{section.estimated_word_count} words
-                      </span>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={
+                        section.heading ||
+                        section.section_type ||
+                        `Section ${idx + 1}`
+                      }
+                      onChange={(e) =>
+                        updateSection(idx, {
+                          ...section,
+                          heading: e.target.value,
+                        })
+                      }
+                      className="text-sm font-medium h-8"
+                    />
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => moveSection(idx, -1)}
+                        disabled={idx === 0}
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => moveSection(idx, 1)}
+                        disabled={idx === sections.length - 1}
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive"
+                        onClick={() => removeSection(idx)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                   {section.purpose && (
                     <p className="text-xs text-muted-foreground">
@@ -133,17 +242,32 @@ export function OutlineViewer({ onWrite, isWriting }: OutlineViewerProps) {
                   {section.key_points && section.key_points.length > 0 && (
                     <ul className="space-y-1 ml-4">
                       {section.key_points.map((point, pIdx) => (
-                        <li
-                          key={pIdx}
-                          className="text-xs text-muted-foreground list-disc"
-                        >
-                          {point}
+                        <li key={pIdx} className="flex items-center gap-1">
+                          <span className="text-muted-foreground text-xs">
+                            &bull;
+                          </span>
+                          <Input
+                            value={point}
+                            onChange={(e) =>
+                              updateKeyPoint(idx, pIdx, e.target.value)
+                            }
+                            className="text-xs h-7 flex-1"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 shrink-0"
+                            onClick={() => removeKeyPoint(idx, pIdx)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
                         </li>
                       ))}
                     </ul>
                   )}
                   {section.talking_points &&
-                    section.talking_points.length > 0 && (
+                    section.talking_points.length > 0 &&
+                    !section.key_points?.length && (
                       <ul className="space-y-1 ml-4">
                         {section.talking_points.map((point, pIdx) => (
                           <li
@@ -155,10 +279,28 @@ export function OutlineViewer({ onWrite, isWriting }: OutlineViewerProps) {
                         ))}
                       </ul>
                     )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1 text-xs"
+                    onClick={() => addKeyPoint(idx)}
+                  >
+                    <Plus className="h-3 w-3" />
+                    Add Point
+                  </Button>
                 </CardContent>
               </Card>
             ))}
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={addSection}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Section
+          </Button>
         </div>
       )}
 
@@ -174,9 +316,58 @@ export function OutlineViewer({ onWrite, isWriting }: OutlineViewerProps) {
         </Card>
       )}
 
+      {/* Template recommendations */}
+      {outline.recommendations && outline.recommendations.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium flex items-center gap-1.5">
+            <LayoutTemplate className="h-4 w-4" />
+            Recommended Templates
+          </h4>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {outline.recommendations.map((rec, idx) => {
+              const isSelected =
+                state.selectedTemplate?.template_name === rec.template_name;
+              return (
+                <Card
+                  key={idx}
+                  className={cn(
+                    "cursor-pointer transition-all hover:border-primary/50",
+                    isSelected && "border-primary ring-1 ring-primary"
+                  )}
+                  onClick={() =>
+                    selectTemplate(isSelected ? null : rec)
+                  }
+                >
+                  <CardContent className="pt-3 pb-2 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">
+                        {rec.template_name}
+                      </p>
+                      {isSelected && (
+                        <Check className="h-4 w-4 text-primary" />
+                      )}
+                    </div>
+                    {rec.rationale && (
+                      <p className="text-xs text-muted-foreground">
+                        {rec.rationale}
+                      </p>
+                    )}
+                    {rec.match_score != null && (
+                      <Badge variant="secondary" className="text-xs">
+                        {Math.round(rec.match_score * 100)}% match
+                      </Badge>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Supporting evidence */}
-      {outline.supporting_evidence &&
-        outline.supporting_evidence.length > 0 && (
+      {state.outline?.supporting_evidence &&
+        state.outline.supporting_evidence.length > 0 && (
           <Collapsible open={evidenceOpen} onOpenChange={setEvidenceOpen}>
             <CollapsibleTrigger asChild>
               <Button variant="ghost" size="sm" className="gap-1 w-full">
@@ -186,11 +377,12 @@ export function OutlineViewer({ onWrite, isWriting }: OutlineViewerProps) {
                     evidenceOpen && "rotate-180"
                   )}
                 />
-                Supporting Evidence ({outline.supporting_evidence.length})
+                Supporting Evidence (
+                {state.outline.supporting_evidence.length})
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-2 mt-2">
-              {outline.supporting_evidence.map((ev, idx) => (
+              {state.outline.supporting_evidence.map((ev, idx) => (
                 <Card key={idx}>
                   <CardContent className="pt-3 pb-2 space-y-1">
                     {ev.title && (

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { usePipeline } from "@/lib/content-pipeline/pipeline-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import {
   Collapsible,
@@ -16,7 +17,7 @@ import { toast } from "sonner";
 import { useAuthor } from "@/hooks/use-author";
 import { useSaveSession } from "@/lib/api/hooks/use-content-sessions";
 import { useSaveGeneratedPost } from "@/lib/api/hooks/use-all-content";
-import { Check, ChevronDown, Copy, Image, Save, Loader2 } from "lucide-react";
+import { Check, ChevronDown, Copy, Image, RotateCcw, Save, Loader2 } from "lucide-react";
 import type {
   WritePostResponse,
   WriteArticleResponse,
@@ -25,7 +26,7 @@ import type {
 } from "@/lib/api/types";
 
 export function WrittenContent() {
-  const { state } = usePipeline();
+  const { state, setEditedContent } = usePipeline();
   const { author } = useAuthor();
   const saveSession = useSaveSession();
   const savePost = useSaveGeneratedPost();
@@ -39,13 +40,16 @@ export function WrittenContent() {
   const isPost = state.contentType === "linkedin_post";
   const content = state.writtenContent;
 
-  const body = isPost
+  const originalBody = isPost
     ? (content as WritePostResponse).final_post_body ||
       (content as WritePostResponse).post_content ||
       ""
     : (content as WriteArticleResponse).final_article_body ||
       (content as WriteArticleResponse).final_article ||
       "";
+
+  const body = state.editedContent ?? originalBody;
+  const isEdited = state.editedContent != null && state.editedContent !== originalBody;
 
   const title = !isPost
     ? (content as WriteArticleResponse).title
@@ -206,11 +210,32 @@ export function WrittenContent() {
         </div>
       </div>
 
-      {/* Content body */}
+      {/* Editable content body */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
-            {body}
+        <CardContent className="pt-6 space-y-2">
+          <Textarea
+            value={body}
+            onChange={(e) => setEditedContent(e.target.value)}
+            className="min-h-[300px] text-sm resize-y whitespace-pre-wrap font-sans leading-relaxed"
+            rows={isPost ? 15 : 25}
+          />
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              {body.split(/\s+/).filter(Boolean).length} words
+              {isPost &&
+                ` · ${body.length.toLocaleString()} characters`}
+            </span>
+            {isEdited && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-1 text-xs"
+                onClick={() => setEditedContent(null)}
+              >
+                <RotateCcw className="h-3 w-3" />
+                Reset to original
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>

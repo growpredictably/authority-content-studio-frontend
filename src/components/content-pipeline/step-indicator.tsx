@@ -5,15 +5,16 @@ import { usePathname } from "next/navigation";
 import { usePipeline } from "@/lib/content-pipeline/pipeline-context";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { FileText, BookOpen, PenTool, RotateCcw } from "lucide-react";
+import { FileText, SlidersHorizontal, BookOpen, PenTool, RotateCcw } from "lucide-react";
 
 const steps = [
   { key: "angles" as const, label: "Angles", href: "/content/angles", icon: FileText },
+  { key: "refine" as const, label: "Refine", href: "/content/refine", icon: SlidersHorizontal },
   { key: "outline" as const, label: "Outline", href: "/content/outline", icon: BookOpen },
   { key: "write" as const, label: "Write", href: "/content/write", icon: PenTool },
 ];
 
-const stepOrder = { angles: 0, outline: 1, write: 2 };
+const stepOrder = { angles: 0, refine: 1, outline: 2, write: 3 };
 
 export function StepIndicator() {
   const pathname = usePathname();

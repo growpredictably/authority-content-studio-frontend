@@ -18,6 +18,7 @@ export function useAutoSave() {
   // Track what we've already saved to avoid duplicate writes
   const savedAnglesCount = useRef(0);
   const savedAngleId = useRef<string | null>(null);
+  const savedApprovedContext = useRef(false);
   const savedOutline = useRef(false);
   const savedWritten = useRef(false);
 
@@ -25,6 +26,7 @@ export function useAutoSave() {
   useEffect(() => {
     savedAnglesCount.current = 0;
     savedAngleId.current = null;
+    savedApprovedContext.current = false;
     savedOutline.current = false;
     savedWritten.current = false;
   }, [state.sessionId]);
@@ -92,6 +94,30 @@ export function useAutoSave() {
       status: "in_progress",
     });
   }, [state.selectedAngle?.title]);
+
+  // Save after context is approved (refine step)
+  useEffect(() => {
+    if (
+      !state.approvedContext ||
+      !state.sessionId ||
+      savedApprovedContext.current ||
+      saveSession.isPending
+    )
+      return;
+
+    savedApprovedContext.current = true;
+
+    saveSession.mutate({
+      id: state.sessionId,
+      user_id: author?.user_id ?? "",
+      approved_context: state.approvedContext as unknown as Record<
+        string,
+        unknown
+      >,
+      current_phase: "refine",
+      status: "in_progress",
+    });
+  }, [!!state.approvedContext]);
 
   // Save after outline is generated
   useEffect(() => {

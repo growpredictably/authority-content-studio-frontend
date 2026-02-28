@@ -24,12 +24,14 @@ export default function OutlinePage() {
     null
   );
 
-  // Guard: redirect if no selected angle
+  // Guard: redirect if no selected angle, or no approved context (must go through refine)
   useEffect(() => {
     if (!state.selectedAngle) {
       router.replace("/content/angles");
+    } else if (!state.approvedContext && !state.outline) {
+      router.replace("/content/refine");
     }
-  }, [state.selectedAngle, router]);
+  }, [state.selectedAngle, state.approvedContext, state.outline, router]);
 
   // Auto-trigger outline generation
   useEffect(() => {
@@ -52,7 +54,7 @@ export default function OutlinePage() {
         brand_id: author.brand_id || "",
         content_type: state.contentType,
         selected_angle: state.selectedAngle,
-        context: state.anglesContext || {},
+        context: state.approvedContext || state.anglesContext || {},
         session_record_id: state.sessionRecordId || "",
         archetype: author.archetype || "",
         archetype_description: author.archetype_description || "",

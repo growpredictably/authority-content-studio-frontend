@@ -14,12 +14,13 @@ import type {
   AnglesContext,
   GenerateOutlineResponse,
   OutlineHook,
+  TemplateRecommendation,
   WritePostResponse,
   WriteArticleResponse,
   DraftSession,
 } from "@/lib/api/types";
 
-export type PipelineStep = "angles" | "outline" | "write";
+export type PipelineStep = "angles" | "refine" | "outline" | "write";
 
 export interface PipelineState {
   // Persistence
@@ -36,14 +37,22 @@ export interface PipelineState {
   sessionRecordId: string | null;
   trackingId: string | null;
 
+  // Step 1.5: Refine (approved context for outline generation)
+  approvedContext: AnglesContext | null;
+
   // Step 2: Outline
   selectedAngle: ContentAngle | null;
   outline: GenerateOutlineResponse | null;
+  editedOutline: GenerateOutlineResponse | null;
   selectedHook: OutlineHook | null;
-  selectedTemplate: string | null;
+  selectedTemplate: TemplateRecommendation | null;
 
   // Step 3: Written content
   writtenContent: WritePostResponse | WriteArticleResponse | null;
+  editedContent: string | null;
+
+  // ICP selection
+  selectedIcpId: string | null;
 }
 
 interface PipelineContextValue {
@@ -60,12 +69,16 @@ interface PipelineContextValue {
     trackingId?: string
   ) => void;
   selectAngle: (angle: ContentAngle) => void;
+  setApprovedContext: (context: AnglesContext) => void;
   setOutlineResult: (outline: GenerateOutlineResponse) => void;
+  setEditedOutline: (outline: GenerateOutlineResponse) => void;
   selectHook: (hook: OutlineHook) => void;
-  selectTemplate: (template: string) => void;
+  selectTemplate: (template: TemplateRecommendation | null) => void;
   setWrittenContent: (
     content: WritePostResponse | WriteArticleResponse
   ) => void;
+  setEditedContent: (content: string | null) => void;
+  setSelectedIcp: (icpId: string | null) => void;
   setSessionId: (id: string) => void;
   restoreSession: (session: DraftSession) => void;
   reset: () => void;
@@ -81,11 +94,15 @@ const initialState: PipelineState = {
   anglesContext: null,
   sessionRecordId: null,
   trackingId: null,
+  approvedContext: null,
   selectedAngle: null,
   outline: null,
+  editedOutline: null,
   selectedHook: null,
   selectedTemplate: null,
   writtenContent: null,
+  editedContent: null,
+  selectedIcpId: null,
 };
 
 const PipelineContext = createContext<PipelineContextValue | null>(null);
@@ -126,11 +143,18 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({
       ...prev,
       selectedAngle: angle,
+      approvedContext: null,
       outline: null,
+      editedOutline: null,
       selectedHook: null,
       selectedTemplate: null,
       writtenContent: null,
+      editedContent: null,
     }));
+  }, []);
+
+  const setApprovedContext = useCallback((context: AnglesContext) => {
+    setState((prev) => ({ ...prev, approvedContext: context }));
   }, []);
 
   const setOutlineResult = useCallback(
@@ -140,13 +164,23 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const setEditedOutline = useCallback(
+    (outline: GenerateOutlineResponse) => {
+      setState((prev) => ({ ...prev, editedOutline: outline }));
+    },
+    []
+  );
+
   const selectHook = useCallback((hook: OutlineHook) => {
     setState((prev) => ({ ...prev, selectedHook: hook }));
   }, []);
 
-  const selectTemplate = useCallback((template: string) => {
-    setState((prev) => ({ ...prev, selectedTemplate: template }));
-  }, []);
+  const selectTemplate = useCallback(
+    (template: TemplateRecommendation | null) => {
+      setState((prev) => ({ ...prev, selectedTemplate: template }));
+    },
+    []
+  );
 
   const setWrittenContent = useCallback(
     (content: WritePostResponse | WriteArticleResponse) => {
@@ -154,6 +188,14 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
     },
     []
   );
+
+  const setEditedContent = useCallback((content: string | null) => {
+    setState((prev) => ({ ...prev, editedContent: content }));
+  }, []);
+
+  const setSelectedIcp = useCallback((icpId: string | null) => {
+    setState((prev) => ({ ...prev, selectedIcpId: icpId }));
+  }, []);
 
   const setSessionId = useCallback((id: string) => {
     setState((prev) => ({ ...prev, sessionId: id }));
@@ -174,14 +216,18 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
         null) as unknown as AnglesContext | null),
       sessionRecordId: session.session_record_id || session.id,
       trackingId: null,
+      approvedContext: (session.approved_context as unknown as AnglesContext | null) ?? null,
       selectedAngle: (session.selected_angle as unknown as ContentAngle | null) ?? null,
       outline: ((session.outline_data ||
         session.outline ||
         null) as unknown as GenerateOutlineResponse | null),
+      editedOutline: null,
       selectedHook: null,
       selectedTemplate: null,
       writtenContent: (session.written_content as unknown as WritePostResponse | null) ??
         null,
+      editedContent: null,
+      selectedIcpId: null,
     });
   }, []);
 
@@ -191,9 +237,11 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
 
   const currentMaxStep: PipelineStep = state.writtenContent
     ? "write"
-    : state.selectedAngle
+    : state.outline
       ? "outline"
-      : "angles";
+      : state.approvedContext || state.selectedAngle
+        ? "refine"
+        : "angles";
 
   return (
     <PipelineContext.Provider
@@ -203,10 +251,14 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
         setRawInput,
         setAnglesResult,
         selectAngle,
+        setApprovedContext,
         setOutlineResult,
+        setEditedOutline,
         selectHook,
         selectTemplate,
         setWrittenContent,
+        setEditedContent,
+        setSelectedIcp,
         setSessionId,
         restoreSession,
         reset,

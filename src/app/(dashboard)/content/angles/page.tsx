@@ -6,7 +6,9 @@ import { usePipeline } from "@/lib/content-pipeline/pipeline-context";
 import { useAutoSave } from "@/lib/content-pipeline/use-auto-save";
 import { useAuthor } from "@/hooks/use-author";
 import { AuthorSelector } from "@/components/shared/author-selector";
+import { ICPSelector } from "@/components/content-pipeline/icp-selector";
 import { useGetAngles } from "@/lib/api/hooks/use-content-pipeline";
+import { useICPs } from "@/lib/api/hooks/use-icps";
 import { useContentSessionDetail } from "@/lib/api/hooks/use-content-sessions";
 import { StrategySelector } from "@/components/content-pipeline/strategy-selector";
 import { SourceInput } from "@/components/content-pipeline/source-input";
@@ -47,14 +49,21 @@ function AnglesPageInner() {
       router.replace("/content/write");
     } else if (s.outline_data || s.outline) {
       router.replace("/content/outline");
+    } else if (s.approved_context || s.selected_angle) {
+      router.replace("/content/refine");
     }
-    // If only selected_angle or angles, stay on this page
+    // If only angles, stay on this page
   }, [sessionData, restoreSession, router]);
+
+  const { data: icpData } = useICPs(author?.id);
+  const icps = icpData?.icps ?? [];
 
   function handleGenerate() {
     if (!author || !state.strategy) return;
 
     setProgressTrackingId(null);
+
+    const selectedIcp = icps.find((i) => i.id === state.selectedIcpId);
 
     getAngles.mutate(
       {
@@ -67,6 +76,7 @@ function AnglesPageInner() {
         raw_input: state.rawInput,
         archetype: author.archetype || "",
         archetype_description: author.archetype_description || "",
+        ...(selectedIcp ? { icp: selectedIcp.name } : {}),
       },
       {
         onSuccess: (data) => {
@@ -92,7 +102,7 @@ function AnglesPageInner() {
   }
 
   function handleAngleSelected(angle: ContentAngle) {
-    router.push("/content/outline");
+    router.push("/content/refine");
   }
 
   // Show loading while restoring a session
@@ -113,6 +123,7 @@ function AnglesPageInner() {
         <FileText className="h-5 w-5" />
         <h2 className="text-xl font-semibold">Get Angles</h2>
         <AuthorSelector />
+        <ICPSelector />
       </div>
 
       {!author ? (
