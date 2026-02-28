@@ -21,6 +21,9 @@ import {
   Target,
   Mic,
   Brain,
+  Radar,
+  Users,
+  Rocket,
 } from "lucide-react";
 import Link from "next/link";
 import { AuthorityScore } from "@/components/command-center/authority-score";
@@ -29,46 +32,60 @@ import { DailySyncCards } from "@/components/command-center/daily-sync-cards";
 
 const quickLinks = [
   {
-    label: "Optimizer",
-    description: "Optimize your LinkedIn presence",
-    href: "/optimizer",
-    icon: Sparkles,
-    phase: 1,
-  },
-  {
-    label: "Content Pipeline",
-    description: "Generate angles, outlines, and posts",
+    label: "Write a Post",
+    description: "Generate angles, outlines, and posts using your voice",
     href: "/content/angles",
     icon: PenTool,
-    phase: 3,
+    accent: "text-blue-600",
+  },
+  {
+    label: "Scan for Evidence",
+    description: "Find stats, studies, and expert opinions from the web",
+    href: "/authority/evidence",
+    icon: Radar,
+    accent: "text-violet-600",
+  },
+  {
+    label: "Review ICPs",
+    description: "Check your ideal customer profiles and their pains",
+    href: "/authority/icps",
+    icon: Users,
+    accent: "text-emerald-600",
+  },
+  {
+    label: "Profile Optimizer",
+    description: "Optimize your LinkedIn presence with AI suggestions",
+    href: "/optimizer",
+    icon: Sparkles,
+    accent: "text-amber-600",
   },
   {
     label: "Authority Packets",
     description: "Manage your authority packet inventory",
     href: "/authority/packets",
     icon: Package,
-    phase: 4,
+    accent: "text-pink-600",
   },
   {
     label: "Gap Analysis",
-    description: "Find and fill gaps in your authority",
+    description: "Find and fill gaps in your authority positioning",
     href: "/authority/gaps",
     icon: Target,
-    phase: 4,
+    accent: "text-red-600",
   },
   {
     label: "Voice Builder",
-    description: "Build and refine your voice DNA",
+    description: "Build and refine your unique voice DNA",
     href: "/voice",
     icon: Mic,
-    phase: 5,
+    accent: "text-cyan-600",
   },
   {
     label: "Brain Builder",
-    description: "Curate external knowledge",
+    description: "Curate external knowledge and build your brain",
     href: "/brain",
     icon: Brain,
-    phase: 5,
+    accent: "text-orange-600",
   },
 ];
 
@@ -149,26 +166,28 @@ export default function CommandCenterPage() {
         )
       )}
 
-      {/* Quick Links */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {quickLinks.map((link) => (
-          <Link key={link.href} href={link.href}>
-            <Card className="h-full transition-colors hover:bg-accent/50 cursor-pointer">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <link.icon className="h-4 w-4" />
-                  {link.label}
-                </CardTitle>
-                <CardDescription>{link.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Badge variant="outline" className="text-xs">
-                  Phase {link.phase}
-                </Badge>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+      {/* Quick Actions */}
+      <div>
+        <h2 className="text-lg font-semibold mb-3">Quick Actions</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {quickLinks.map((link) => (
+            <Link key={link.href} href={link.href}>
+              <Card className="h-full transition-all hover:shadow-md hover:-translate-y-0.5 cursor-pointer group">
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-sm">
+                    <link.icon className={`h-4 w-4 ${link.accent} group-hover:scale-110 transition-transform`} />
+                    {link.label}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {link.description}
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );

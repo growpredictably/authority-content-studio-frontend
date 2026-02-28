@@ -20,6 +20,31 @@ async function getToken(): Promise<string> {
 
 // ─── Query Hooks ─────────────────────────────────────────────
 
+/** List completed sessions (those with final_content) for All Content page. */
+export function useCompletedSessions(
+  userId: string | undefined,
+  contentType?: string,
+  search?: string,
+  sort?: string
+) {
+  return useQuery({
+    queryKey: ["all-content", userId, contentType, search, sort],
+    queryFn: async () => {
+      const token = await getToken();
+      const params = new URLSearchParams({ user_id: userId! });
+      if (contentType) params.set("content_type", contentType);
+      if (search) params.set("search", search);
+      if (sort) params.set("sort", sort);
+      return apiGet<ContentSessionListResponse>(
+        `/v1/content-sessions/completed?${params.toString()}`,
+        token
+      );
+    },
+    enabled: !!userId,
+    staleTime: 60 * 1000,
+  });
+}
+
 /** List sessions for an author, newest first. */
 export function useContentSessions(
   authorId: string | undefined,
@@ -67,6 +92,7 @@ export function useSaveSession() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["content-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["all-content"] });
     },
   });
 }
@@ -109,6 +135,41 @@ export function useArchiveSession() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["content-sessions"] });
+    },
+  });
+}
+
+/** Count empty draft sessions (no meaningful progress) for cleanup UI. */
+export function useEmptyDraftsCount(userId: string | undefined) {
+  return useQuery({
+    queryKey: ["empty-drafts-count", userId],
+    queryFn: async () => {
+      const token = await getToken();
+      return apiGet<{ count: number }>(
+        `/v1/content-sessions/empty-count/${userId}`,
+        token
+      );
+    },
+    enabled: !!userId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+/** Bulk delete content sessions. */
+export function useBulkDeleteSessions() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (sessionIds: string[]) => {
+      const token = await getToken();
+      return apiCall<{ success: boolean; deleted_count: number }>(
+        "/v1/content-sessions/bulk-delete",
+        { session_ids: sessionIds },
+        token
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["content-sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["empty-drafts-count"] });
     },
   });
 }

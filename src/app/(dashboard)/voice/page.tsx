@@ -11,6 +11,7 @@ import {
   useMiningStatus,
   useIngestDna,
   useResolveConflicts,
+  useTranscribeAudio,
 } from "@/lib/api/hooks/use-voice-builder";
 import {
   VoiceInputTabs,
@@ -34,6 +35,7 @@ type Stage = "input" | "mining" | "review" | "committed";
 export default function VoiceBuilderPage() {
   const { author } = useAuthor();
   const startMining = useStartMining();
+  const transcribeAudio = useTranscribeAudio();
   const ingestDna = useIngestDna();
   const resolveConflicts = useResolveConflicts();
 
@@ -65,9 +67,12 @@ export default function VoiceBuilderPage() {
   function handleSubmit(sourceType: VoiceSourceType, content: string) {
     if (!author) return;
 
+    // URL scrape goes through the scraper first, then mine as text
+    const mineSourceType = sourceType === "url" ? "text" : sourceType;
+
     startMining.mutate(
       {
-        source_type: sourceType,
+        source_type: mineSourceType as "text" | "youtube" | "gdoc" | "gsheet",
         content,
         author_id: author.id,
         user_id: author.user_id,
@@ -81,6 +86,30 @@ export default function VoiceBuilderPage() {
         onError: (err) => {
           toast.error(
             err instanceof Error ? err.message : "Failed to start mining"
+          );
+        },
+      }
+    );
+  }
+
+  function handleAudioRecorded(audioBlob: Blob) {
+    if (!author) return;
+
+    transcribeAudio.mutate(
+      { audioBlob, userId: author.user_id },
+      {
+        onSuccess: (res) => {
+          if (!res.transcript || res.transcript.trim().length < 20) {
+            toast.error("Transcript too short. Please try recording again with more content.");
+            return;
+          }
+          toast.success(`Transcribed ${res.duration_seconds ? Math.round(res.duration_seconds) + "s" : ""} of audio`);
+          // Now mine the transcript
+          handleSubmit("text", res.transcript);
+        },
+        onError: (err) => {
+          toast.error(
+            err instanceof Error ? err.message : "Transcription failed"
           );
         },
       }
@@ -176,6 +205,8 @@ export default function VoiceBuilderPage() {
                 <VoiceInputTabs
                   onSubmit={handleSubmit}
                   isSubmitting={startMining.isPending}
+                  onAudioRecorded={handleAudioRecorded}
+                  isTranscribing={transcribeAudio.isPending}
                 />
               </CardContent>
             </Card>

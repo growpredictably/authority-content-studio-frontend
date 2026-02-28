@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePipeline } from "@/lib/content-pipeline/pipeline-context";
+import { useAutoSave } from "@/lib/content-pipeline/use-auto-save";
 import { useAuthor } from "@/hooks/use-author";
 import {
   useWritePost,
@@ -20,6 +21,7 @@ export default function WritePage() {
   const { state, setWrittenContent } = usePipeline();
   const writePost = useWritePost();
   const writeArticle = useWriteArticle();
+  useAutoSave();
   const [hasTriggered, setHasTriggered] = useState(false);
   const [progressTrackingId, setProgressTrackingId] = useState<string | null>(
     null

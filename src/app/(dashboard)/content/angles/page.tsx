@@ -1,27 +1,54 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { usePipeline } from "@/lib/content-pipeline/pipeline-context";
+import { useAutoSave } from "@/lib/content-pipeline/use-auto-save";
 import { useAuthor } from "@/hooks/use-author";
 import { useGetAngles } from "@/lib/api/hooks/use-content-pipeline";
+import { useContentSessionDetail } from "@/lib/api/hooks/use-content-sessions";
 import { StrategySelector } from "@/components/content-pipeline/strategy-selector";
 import { SourceInput } from "@/components/content-pipeline/source-input";
 import { AnglesResults } from "@/components/content-pipeline/angles-results";
 import { ProgressDisplay } from "@/components/content-pipeline/progress-display";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileText } from "lucide-react";
+import { FileText, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import type { ContentAngle } from "@/lib/api/types";
+import type { ContentAngle, DraftSession } from "@/lib/api/types";
 
-export default function AnglesPage() {
+function AnglesPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { author } = useAuthor();
-  const { state, setAnglesResult } = usePipeline();
+  const { state, setAnglesResult, restoreSession } = usePipeline();
   const getAngles = useGetAngles();
+  useAutoSave();
   const [progressTrackingId, setProgressTrackingId] = useState<string | null>(
     null
   );
+
+  // Session restore from ?session= param
+  const sessionParam = searchParams.get("session");
+  const { data: sessionData, isLoading: sessionLoading } =
+    useContentSessionDetail(sessionParam || undefined);
+  const didRestore = useRef(false);
+
+  useEffect(() => {
+    if (!sessionData || didRestore.current) return;
+    didRestore.current = true;
+
+    // Restore pipeline state from the loaded session
+    restoreSession(sessionData as unknown as DraftSession);
+
+    // Navigate to the furthest stage
+    const s = sessionData as unknown as DraftSession;
+    if (s.written_content || s.final_content) {
+      router.replace("/content/write");
+    } else if (s.outline_data || s.outline) {
+      router.replace("/content/outline");
+    }
+    // If only selected_angle or angles, stay on this page
+  }, [sessionData, restoreSession, router]);
 
   function handleGenerate() {
     if (!author || !state.strategy) return;
@@ -67,6 +94,18 @@ export default function AnglesPage() {
     router.push("/content/outline");
   }
 
+  // Show loading while restoring a session
+  if (sessionParam && sessionLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <span className="ml-2 text-sm text-muted-foreground">
+          Restoring session...
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
@@ -106,5 +145,19 @@ export default function AnglesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AnglesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <AnglesPageInner />
+    </Suspense>
   );
 }

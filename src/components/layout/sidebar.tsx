@@ -8,15 +8,22 @@ import {
   Sparkles,
   PenTool,
   FolderOpen,
+  FolderKanban,
   UserCircle,
   LayoutTemplate,
   BarChart3,
   TrendingUp,
   Package,
   Target,
+  Radar,
+  Users,
+  Layers,
   Mic,
   Brain,
+  Rocket,
   Settings,
+  FileText,
+  AudioWaveform,
 } from "lucide-react";
 
 interface NavItem {
@@ -42,7 +49,9 @@ const navGroups: NavGroup[] = [
     label: "Create & Publish",
     items: [
       { label: "New Content", href: "/content/angles", icon: PenTool },
-      { label: "My Drafts", href: "/content/drafts", icon: FolderOpen },
+      { label: "All Content", href: "/content", icon: FolderKanban },
+      { label: "Drafts", href: "/content/drafts", icon: FolderOpen },
+      { label: "Market Hunter", href: "/content/market-analysis", icon: TrendingUp },
     ],
   },
   {
@@ -59,18 +68,26 @@ const navGroups: NavGroup[] = [
       { label: "Overview", href: "/authority/overview", icon: TrendingUp },
       { label: "Authority Packets", href: "/authority/packets", icon: Package },
       { label: "Gap Analysis", href: "/authority/gaps", icon: Target },
+      { label: "Evidence Feed", href: "/authority/evidence", icon: Radar },
+      { label: "ICPs", href: "/authority/icps", icon: Users },
+      { label: "Frameworks", href: "/authority/frameworks", icon: Layers },
     ],
   },
   {
     label: "Foundation",
     items: [
       { label: "Voice DNA", href: "/voice", icon: Mic },
+      { label: "Voice Profile", href: "/voice/profiles", icon: AudioWaveform },
+      { label: "Transcriptions", href: "/voice/transcriptions", icon: FileText },
       { label: "Brain Builder", href: "/brain", icon: Brain },
     ],
   },
   {
     label: "",
-    items: [{ label: "Settings", href: "/settings", icon: Settings }],
+    items: [
+      { label: "Get Started", href: "/onboarding", icon: Rocket },
+      { label: "Settings", href: "/settings", icon: Settings },
+    ],
   },
 ];
 
@@ -79,6 +96,7 @@ export function Sidebar() {
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
+    if (href === "/content") return pathname === "/content";
     return pathname === href || pathname.startsWith(href + "/");
   }
 

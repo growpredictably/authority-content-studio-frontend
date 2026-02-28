@@ -127,6 +127,25 @@ export async function apiPatch<T>(
   return res.json();
 }
 
+/** DELETE request to the Modal backend with Bearer token auth */
+export async function apiDelete<T>(
+  endpoint: string,
+  token: string
+): Promise<T> {
+  const res = await fetch(`${BACKEND_URL}${endpoint}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new ApiError(res.status, await res.text());
+  }
+
+  return res.json();
+}
+
 /** Unauthenticated GET (for health check) */
 export async function apiGetPublic<T>(endpoint: string): Promise<T> {
   const res = await fetch(`${BACKEND_URL}${endpoint}`, {

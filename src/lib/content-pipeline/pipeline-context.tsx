@@ -16,11 +16,15 @@ import type {
   OutlineHook,
   WritePostResponse,
   WriteArticleResponse,
+  DraftSession,
 } from "@/lib/api/types";
 
 export type PipelineStep = "angles" | "outline" | "write";
 
 export interface PipelineState {
+  // Persistence
+  sessionId: string | null; // content_sessions.id (for upserts)
+
   // Step 1: Source
   strategy: ContentStrategy | null;
   contentType: PipelineContentType;
@@ -62,11 +66,14 @@ interface PipelineContextValue {
   setWrittenContent: (
     content: WritePostResponse | WriteArticleResponse
   ) => void;
+  setSessionId: (id: string) => void;
+  restoreSession: (session: DraftSession) => void;
   reset: () => void;
   currentMaxStep: PipelineStep;
 }
 
 const initialState: PipelineState = {
+  sessionId: null,
   strategy: null,
   contentType: "linkedin_post",
   rawInput: "",
@@ -148,6 +155,36 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const setSessionId = useCallback((id: string) => {
+    setState((prev) => ({ ...prev, sessionId: id }));
+  }, []);
+
+  const restoreSession = useCallback((session: DraftSession) => {
+    setState({
+      sessionId: session.id,
+      strategy: ((session.content_strategy ||
+        session.strategy ||
+        null) as ContentStrategy | null),
+      contentType: ((session.content_type ||
+        "linkedin_post") as PipelineContentType),
+      rawInput: session.youtube_url || "",
+      angles: ((session.all_angles as unknown as ContentAngle[]) || []),
+      anglesContext: ((session.approved_context ||
+        session.full_context ||
+        null) as unknown as AnglesContext | null),
+      sessionRecordId: session.session_record_id || session.id,
+      trackingId: null,
+      selectedAngle: (session.selected_angle as unknown as ContentAngle | null) ?? null,
+      outline: ((session.outline_data ||
+        session.outline ||
+        null) as unknown as GenerateOutlineResponse | null),
+      selectedHook: null,
+      selectedTemplate: null,
+      writtenContent: (session.written_content as unknown as WritePostResponse | null) ??
+        null,
+    });
+  }, []);
+
   const reset = useCallback(() => {
     setState(initialState);
   }, []);
@@ -170,6 +207,8 @@ export function PipelineProvider({ children }: { children: ReactNode }) {
         selectHook,
         selectTemplate,
         setWrittenContent,
+        setSessionId,
+        restoreSession,
         reset,
         currentMaxStep,
       }}

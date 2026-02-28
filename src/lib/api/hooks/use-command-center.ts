@@ -33,7 +33,7 @@ export function useAuthorityScore(authorId: string | undefined) {
       );
     },
     enabled: !!authorId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 15 * 60 * 1000, // 15 min — runs 6 DB queries
   });
 }
 
@@ -65,7 +65,7 @@ export function useLeverage(authorId: string | undefined) {
       );
     },
     enabled: !!authorId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 15 * 60 * 1000, // 15 min — computational endpoint
   });
 }
 

@@ -1,45 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import type { Author } from "@/lib/api/types";
 
 export function useAuthor() {
-  const [author, setAuthor] = useState<Author | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchAuthor() {
+  const {
+    data: author,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["author"],
+    queryFn: async (): Promise<Author | null> => {
       const supabase = createClient();
-
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
+      if (!user) return null;
 
       const { data, error: dbError } = await supabase
         .from("authors_dna")
-        .select("id, user_id, name, brand_id, archetype, archetype_description")
+        .select(
+          "id, user_id, name, brand_id, archetype, archetype_description"
+        )
         .eq("user_id", user.id)
         .limit(1)
         .single();
 
-      if (dbError) {
-        setError(dbError.message);
-      } else if (data) {
-        setAuthor(data as Author);
-      }
+      if (dbError) throw dbError;
+      return data as Author;
+    },
+    staleTime: 5 * 60 * 1000, // 5 min cache
+    retry: 1,
+  });
 
-      setIsLoading(false);
-    }
-
-    fetchAuthor();
-  }, []);
-
-  return { author, isLoading, error };
+  return { author: author ?? null, isLoading, error: error?.message ?? null };
 }

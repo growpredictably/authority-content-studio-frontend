@@ -7,9 +7,13 @@ import { StepIndicator } from "@/components/content-pipeline/step-indicator";
 
 export default function ContentLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const isDrafts = pathname === "/content/drafts";
+  // These pages are NOT part of the content pipeline — skip PipelineProvider
+  const skipPipeline =
+    pathname === "/content" ||
+    pathname === "/content/drafts" ||
+    pathname === "/content/market-analysis";
 
-  if (isDrafts) {
+  if (skipPipeline) {
     return <>{children}</>;
   }
 

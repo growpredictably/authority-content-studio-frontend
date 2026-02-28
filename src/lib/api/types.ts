@@ -720,7 +720,7 @@ export interface BrainSearchResponse {
   threshold: number;
 }
 
-// ─── Content Sessions Types ──────────────────────────────────
+// ─── Content Sessions Types (NEW column names — used by pipeline save) ───
 
 export interface ContentSession {
   id: string;
@@ -761,6 +761,65 @@ export interface OutcomeUpdateRequest {
   published_url?: string;
 }
 
+// ─── Draft Session Types (OLD column names — used by Drafts page) ────
+
+export interface DraftSession {
+  id: string;
+  user_id: string;
+  author_id?: string;
+  session_record_id?: string;
+  content_strategy?: string;
+  content_type?: string;
+  research_strategy?: string;
+  youtube_url?: string;
+  target_icp?: string;
+  current_phase?: string;
+  status?: string;
+  all_angles?: unknown[];
+  selected_angle?: Record<string, unknown>;
+  full_context?: Record<string, unknown>;
+  approved_context?: Record<string, unknown>;
+  outline_data?: Record<string, unknown>;
+  full_outline_response?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  // NEW columns (from migration 024, populated for new pipeline sessions)
+  strategy?: string;
+  title?: string;
+  outline?: Record<string, unknown>;
+  written_content?: Record<string, unknown>;
+  final_content?: string;
+  word_count?: number;
+}
+
+// ─── Generated Posts Types (All Content page) ────────────────
+
+export interface GeneratedPost {
+  id: string;
+  user_id: string;
+  session_id?: string;
+  post_title?: string;
+  post_body: string;
+  image_prompt?: string;
+  selected_hook?: Record<string, unknown>;
+  selected_template?: Record<string, unknown>;
+  selected_evidence?: Record<string, unknown>;
+  previous_versions?: unknown[];
+  version: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  content_sessions?: {
+    id: string;
+    youtube_url?: string;
+    author_id?: string;
+    target_icp?: string;
+    selected_angle?: Record<string, unknown>;
+    content_strategy?: string;
+    content_type?: string;
+  };
+}
+
 // ─── Model Settings Types ────────────────────────────────────
 
 export interface ModelPreferences {
@@ -779,23 +838,272 @@ export interface AvailableModel {
   is_active: boolean;
 }
 
-// ─── Templates (Structure Archetypes) ───────────────────────
+// ─── Templates (LinkedIn Post Templates) ────────────────────
 
-export interface StructureArchetype {
-  id: string;
-  type: string;
+export interface LinkedInPostTemplate {
+  id: number;
+  template_number: number;
+  name: string;
   description: string;
-  blueprint: string;
-  content_type: string;
-  usage_count: number;
-  success_rate: number;
-  tags: string[];
-  source: string;
+  template_content: string;
+  category: string;
+  created_at: string;
 }
 
 export interface TemplatesListResponse {
-  templates: StructureArchetype[];
+  templates: LinkedInPostTemplate[];
   total: number;
+}
+
+// ─── Evidence / Radar Scan Types ─────────────────────────────
+
+export interface RadarEvidenceItem {
+  source_url: string;
+  source_title: string;
+  snippet: string;
+  relevance_score: number;
+  evidence_type: "statistic" | "study" | "expert_opinion" | "counter_argument";
+}
+
+export interface RadarScanRequest {
+  author_id: string;
+  belief_text: string;
+  belief_id?: string;
+  scan_type: "evidence" | "counter";
+  max_results?: number;
+}
+
+export interface RadarScanResponse {
+  success: boolean;
+  author_id: string;
+  query_used: string;
+  scan_type: string;
+  evidence_items: RadarEvidenceItem[];
+  total_found: number;
+  curate_candidates: Record<string, unknown>[];
+  message: string;
+  summary?: string;
+}
+
+// ─── ICP Types ──────────────────────────────────────────────
+
+export interface ICPPainGain {
+  id?: string;
+  icp_id?: string;
+  pain_title?: string;
+  pain_description?: string;
+  description?: string;
+  gain_title?: string;
+  gain_description?: string;
+  hope_dream?: string;
+  category?: string;
+  subcategory?: string;
+  source_url?: string;
+  [key: string]: unknown;
+}
+
+export interface ICP {
+  id: string;
+  brand_id: string;
+  user_id?: string;
+  name: string;
+  demographics?: string;
+  previous_actions?: string;
+  purchase_drivers?: string;
+  aspirations?: string;
+  frustrations?: string;
+  before_state?: Record<string, string>;
+  after_state?: Record<string, string>;
+  sales_filters?: string;
+  pains_gains?: ICPPainGain[];
+  created_at?: string;
+}
+
+export interface ICPListResponse {
+  icps: ICP[];
+  total: number;
+}
+
+export interface ICPGenerateResponse {
+  success: boolean;
+  saved: boolean;
+  authenticated: boolean;
+  icp: ICP;
+}
+
+// ─── Transcription Types (Fireflies) ────────────────────────
+
+export interface TranscriptionSummaryData {
+  overview?: string;
+  short_summary?: string;
+  action_items?: string[];
+  topics_discussed?: string[];
+  keywords?: string[];
+  outline?: string;
+}
+
+export interface FirefliesTranscription {
+  id: number;
+  title: string;
+  transcript: string | null;
+  transcript_summary: string | null;
+  transcript_id: string | null;
+  record_id: string | null;
+  user_id: string;
+  duration_minutes: number | null;
+  meeting_type: string | null;
+  meeting_date: string | null;
+  organizer_email: string | null;
+  participants: string[] | null;
+  fireflies_url: string | null;
+  summary_data: TranscriptionSummaryData | null;
+  created_at: string;
+}
+
+export interface TranscriptionTrainingUsage {
+  id: string;
+  transcription_id: number;
+  author_id: string;
+  user_id: string;
+  training_tracking_id: string | null;
+  trained_at: string;
+  created_at: string;
+}
+
+// ─── Market Analysis Types ──────────────────────────────────
+
+export interface MarketSession {
+  session_id: string;
+  search_topic: string;
+  created_at: string;
+  post_count: number;
+  total_likes: number;
+}
+
+export interface MarketSessionsResponse {
+  sessions: MarketSession[];
+  total: number;
+}
+
+export interface MarketPost {
+  id: string;
+  user_id: string;
+  session_id: string;
+  search_topic: string;
+  author_name: string;
+  author_headline: string;
+  author_url: string;
+  post_url: string;
+  post_content: string;
+  likes_count: number;
+  comments_count: number;
+  shares_count: number;
+  is_selected: boolean;
+  created_at?: string;
+}
+
+export interface MarketSessionDetailResponse {
+  session_id: string;
+  search_topic: string;
+  posts: MarketPost[];
+  total: number;
+}
+
+export interface MarketHuntRequest {
+  payload: {
+    topic: string;
+    limit?: number;
+    minLikes?: number;
+    session_id?: string;
+  };
+  user_id: string;
+  author_id: string;
+  author_name: string;
+  brand_id: string;
+}
+
+export interface MarketHuntResponse {
+  success: boolean;
+  session_id: string;
+  topic: string;
+  total_results: number;
+  posts: MarketPost[];
+}
+
+// ─── Framework Types ────────────────────────────────────────
+
+export interface BrandFramework {
+  id: string;
+  brand_id: string;
+  user_id?: string;
+  name: string;
+  framework_id?: string;
+  framework_name?: string;
+  purpose_overview?: string;
+  core_promise?: string;
+  description?: string;
+  unique_benefit?: string;
+  key_components?: FrameworkComponent[];
+  applications?: string;
+  implementation_guidelines?: string;
+  analogies?: string;
+  tags_keywords?: string[];
+  reasoning?: string;
+  quote?: string;
+  quote_author?: string;
+  further_context?: string;
+  framework_author?: string;
+  source_transcription_ids?: number[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface FrameworkComponent {
+  name: string;
+  description?: string;
+  key_points?: string[];
+  examples?: { context?: string; implementation?: string; outcome?: string }[];
+  sub_components?: { name: string; description?: string }[];
+  best_practices?: string[];
+  common_mistakes?: string[];
+  [key: string]: unknown;
+}
+
+export interface FrameworkListResponse {
+  frameworks: BrandFramework[];
+  total: number;
+}
+
+export interface ExtractFrameworkRequest {
+  transcription_id: number;
+  author_id: string;
+  framework_name?: string;
+  use_batch?: boolean;
+}
+
+export interface BatchJobResponse {
+  batch: boolean;
+  batch_id: string;
+  openai_batch_id: string;
+  status: string;
+  message: string;
+}
+
+// ─── Onboarding Types ───────────────────────────────────────
+
+export interface OnboardingStep {
+  step_key: string;
+  label: string;
+  description: string;
+  href: string;
+  completed_at?: string;
+}
+
+export interface OnboardingStatus {
+  steps: OnboardingStep[];
+  completed_count: number;
+  total_steps: number;
+  completion_percent: number;
 }
 
 // ─── Performance ────────────────────────────────────────────
@@ -806,18 +1114,22 @@ export interface LinkedInPostPerformance {
   posted_at: string;
   linkedin_url: string | null;
   posting_type: string;
+  author_name: string | null;
   engagement_likes: number;
   engagement_comments: number;
   engagement_shares: number;
+  empathy_count: number;
   total_engagement: number;
 }
 
 export interface PerformanceSummary {
   total_posts: number;
-  total_impressions: number;
   total_likes: number;
   total_comments: number;
+  total_shares: number;
+  total_empathy: number;
   avg_engagement_per_post: number;
+  linked_count: number;
 }
 
 export interface PerformanceResponse {

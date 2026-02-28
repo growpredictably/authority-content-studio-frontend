@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePipeline } from "@/lib/content-pipeline/pipeline-context";
+import { useAutoSave } from "@/lib/content-pipeline/use-auto-save";
 import { useAuthor } from "@/hooks/use-author";
 import { useGenerateOutline } from "@/lib/api/hooks/use-content-pipeline";
 import { OutlineViewer } from "@/components/content-pipeline/outline-viewer";
@@ -16,6 +17,7 @@ export default function OutlinePage() {
   const { author } = useAuthor();
   const { state, setOutlineResult } = usePipeline();
   const generateOutline = useGenerateOutline();
+  useAutoSave();
   const [hasTriggered, setHasTriggered] = useState(false);
   const [progressTrackingId, setProgressTrackingId] = useState<string | null>(
     null

@@ -22,6 +22,54 @@ async function getToken(): Promise<string> {
   return session.access_token;
 }
 
+// ─── Transcription Hook ─────────────────────────────────────
+
+export function useTranscribeAudio() {
+  return useMutation({
+    mutationFn: async ({
+      audioBlob,
+      userId,
+    }: {
+      audioBlob: Blob;
+      userId: string;
+    }) => {
+      const token = await getToken();
+      const supabase = createClient();
+
+      // 1. Upload audio to Supabase Storage
+      const fileName = `${userId}/${Date.now()}.webm`;
+      const { error: uploadError } = await supabase.storage
+        .from("voice-recordings")
+        .upload(fileName, audioBlob, {
+          contentType: "audio/webm",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+
+      // 2. Get the public URL
+      const { data: urlData } = supabase.storage
+        .from("voice-recordings")
+        .getPublicUrl(fileName);
+
+      const audioUrl = urlData.publicUrl;
+
+      // 3. Call transcription endpoint
+      const trackingId = `voice_${userId.slice(0, 8)}_${Date.now()}`;
+      const result = await apiCall<{
+        tracking_id: string;
+        status: string;
+        transcript: string;
+        duration_seconds?: number;
+      }>("/v1/transcription/transcribe", { audio_url: audioUrl, tracking_id: trackingId }, token);
+
+      return result;
+    },
+  });
+}
+
 // ─── Mining Hooks ────────────────────────────────────────────
 
 export function useStartMining() {
@@ -83,6 +131,50 @@ export function useIngestDna() {
         queryClient.invalidateQueries({ queryKey: ["authority-score"] });
         queryClient.invalidateQueries({ queryKey: ["gap-analysis"] });
       }
+    },
+  });
+}
+
+// ─── Voice Profile Hooks ─────────────────────────────────────
+
+/** Fetch the voice profile (tone, stories, etc.) from authors_dna. */
+export function useVoiceProfile(authorId: string | undefined) {
+  return useQuery({
+    queryKey: ["voice-profile", authorId],
+    queryFn: async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("authors_dna")
+        .select(
+          "id, name, tone, stories, perspectives, quotes, knowledge, experience, preferences"
+        )
+        .eq("id", authorId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!authorId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** Trigger a full voice re-synthesis. */
+export function useResynthesizeVoice() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      author_id: string;
+      user_id: string;
+    }) => {
+      const token = await getToken();
+      return apiCall<{ success: boolean; tracking_id: string }>(
+        "/v1/voice-synthesizer",
+        payload as unknown as Record<string, unknown>,
+        token
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["voice-profile"] });
     },
   });
 }

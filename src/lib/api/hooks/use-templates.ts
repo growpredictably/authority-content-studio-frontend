@@ -14,13 +14,13 @@ async function getToken(): Promise<string> {
   return session.access_token;
 }
 
-/** List structure archetypes (content templates), optionally filtered by content_type. */
-export function useTemplates(contentType?: string) {
+/** List LinkedIn post templates, optionally filtered by category. */
+export function useTemplates(category?: string) {
   return useQuery({
-    queryKey: ["templates", contentType ?? "all"],
+    queryKey: ["templates", category ?? "all"],
     queryFn: async () => {
       const token = await getToken();
-      const qs = contentType ? `?content_type=${contentType}` : "";
+      const qs = category ? `?category=${encodeURIComponent(category)}` : "";
       return apiGet<TemplatesListResponse>(`/v1/templates${qs}`, token);
     },
     staleTime: 10 * 60 * 1000,

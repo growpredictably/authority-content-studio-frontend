@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuthor } from "@/hooks/use-author";
 import { useSaveSession } from "@/lib/api/hooks/use-content-sessions";
+import { useSaveGeneratedPost } from "@/lib/api/hooks/use-all-content";
 import { Check, ChevronDown, Copy, Image, Save, Loader2 } from "lucide-react";
 import type {
   WritePostResponse,
@@ -27,6 +28,7 @@ export function WrittenContent() {
   const { state } = usePipeline();
   const { author } = useAuthor();
   const saveSession = useSaveSession();
+  const savePost = useSaveGeneratedPost();
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
   const [imagePromptsOpen, setImagePromptsOpen] = useState(false);
@@ -83,12 +85,13 @@ export function WrittenContent() {
 
     saveSession.mutate(
       {
+        id: state.sessionId || undefined,
         author_id: author.id,
         user_id: author.user_id,
         strategy: state.strategy ?? undefined,
         content_type: state.contentType,
         title: angleTitle,
-        status: "draft",
+        status: "in_progress",
         raw_input: state.rawInput || undefined,
         selected_angle: state.selectedAngle
           ? (state.selectedAngle as unknown as Record<string, unknown>)
@@ -107,11 +110,35 @@ export function WrittenContent() {
           : undefined,
         final_content: body || undefined,
         word_count: wordCount ?? body.split(/\s+/).length,
+        // Old column names for DraftCard compatibility
+        current_phase: "writing",
+        content_strategy: state.strategy ?? undefined,
+        youtube_url:
+          state.strategy === "YouTube" ? state.rawInput : undefined,
+        all_angles:
+          state.angles.length > 0
+            ? (state.angles as unknown as Record<string, unknown>[])
+            : undefined,
+        session_record_id: state.sessionRecordId || undefined,
       },
       {
         onSuccess: () => {
+          // Also insert into generated_posts for the All Content page
+          savePost.mutate({
+            user_id: author.user_id,
+            session_id: state.sessionRecordId || undefined,
+            post_title: angleTitle,
+            post_body: body,
+            image_prompt: imagePrompts[0] || undefined,
+            selected_hook: state.selectedHook
+              ? (state.selectedHook as unknown as Record<string, unknown>)
+              : undefined,
+            selected_template: undefined,
+            status: "draft",
+          });
+
           setSaved(true);
-          toast.success("Draft saved to My Drafts");
+          toast.success("Content saved");
           setTimeout(() => setSaved(false), 3000);
         },
         onError: (err) => {
