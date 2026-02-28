@@ -63,12 +63,15 @@ export function useSnapshotCacheTtl() {
   });
 }
 
-/** Update the snapshot cache TTL. */
+/** Update the snapshot cache TTL. Requires admin role (app_settings is admin-write). */
 export function useUpdateSnapshotCacheTtl() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (ttl: SnapshotCacheTtl) => {
       const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       const { error } = await supabase
         .from("app_settings")
         .upsert(
@@ -76,6 +79,7 @@ export function useUpdateSnapshotCacheTtl() {
             key: "snapshot_cache_ttl",
             value: ttl,
             updated_at: new Date().toISOString(),
+            updated_by: user?.id ?? null,
           },
           { onConflict: "key" }
         );

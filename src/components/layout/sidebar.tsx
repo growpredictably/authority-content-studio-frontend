@@ -24,7 +24,10 @@ import {
   Settings,
   FileText,
   AudioWaveform,
+  Plug,
+  Shield,
 } from "lucide-react";
+import { useUserRole } from "@/lib/api/hooks/use-user-role";
 
 interface NavItem {
   label: string;
@@ -87,12 +90,14 @@ const navGroups: NavGroup[] = [
     items: [
       { label: "Get Started", href: "/onboarding", icon: Rocket },
       { label: "Settings", href: "/settings", icon: Settings },
+      { label: "Integrations", href: "/integrations", icon: Plug },
     ],
   },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { data: roleData } = useUserRole();
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
@@ -153,6 +158,21 @@ export function Sidebar() {
             })}
           </div>
         ))}
+        {roleData?.isAdmin && (
+          <div className="space-y-0.5">
+            <Link
+              href="/admin"
+              className={cn(
+                "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                isActive("/admin") &&
+                  "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+              )}
+            >
+              <Shield className="h-4 w-4" />
+              <span className="flex-1">Admin</span>
+            </Link>
+          </div>
+        )}
       </nav>
     </aside>
   );

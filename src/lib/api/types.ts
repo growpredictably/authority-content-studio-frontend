@@ -748,6 +748,32 @@ export interface BrainSearchResponse {
   threshold: number;
 }
 
+// ─── External Knowledge Inbox Types ──────────────────────────────────────
+
+export interface InboxItem {
+  id: string;
+  author_id: string;
+  user_id: string;
+  status: "Draft" | "Approved" | "Rejected";
+  source_title?: string;
+  source_url?: string;
+  author?: string;
+  core_principle?: string;
+  contrarian_insight?: string;
+  direct_quote?: string;
+  counter_point?: string;
+  hook_angle?: string;
+  dna_resonance?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface InboxListResponse {
+  items: InboxItem[];
+  total: number;
+  by_status: Record<string, number>;
+}
+
 // ─── Content Sessions Types (NEW column names — used by pipeline save) ───
 
 export interface ContentSession {
@@ -846,6 +872,57 @@ export interface GeneratedPost {
     content_strategy?: string;
     content_type?: string;
   };
+}
+
+// ─── User Profile & Admin Types ──────────────────────────────
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  full_name: string | null;
+  timezone: string;
+  linkedin_url: string | null;
+  linkedin_sync_max_posts: number;
+  linkedin_sync_max_comments: number;
+  linkedin_sync_max_reactions: number;
+  linkedin_sync_include_reposts: boolean;
+  linkedin_sync_include_quote_posts: boolean;
+  linkedin_sync_scrape_comments: boolean;
+  linkedin_sync_scrape_reactions: boolean;
+  webhook_url: string | null;
+  webhook_secret: string | null;
+  webhook_events: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export type AppRoleName = "user" | "admin" | "super_admin";
+
+export interface UserRole {
+  id: string;
+  user_id: string;
+  role: AppRoleName;
+  granted_by: string | null;
+  created_at: string;
+}
+
+export interface AllowedEmail {
+  id: string;
+  email: string;
+  status: "pending" | "accepted";
+  invited_by_id: string | null;
+  invited_by_name: string | null;
+  accepted_at: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface AppSetting {
+  key: string;
+  value: unknown;
+  description: string | null;
+  updated_by: string | null;
+  updated_at: string;
 }
 
 // ─── Model Settings Types ────────────────────────────────────

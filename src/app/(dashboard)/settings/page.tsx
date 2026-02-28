@@ -19,6 +19,9 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Settings,
   User,
@@ -30,6 +33,8 @@ import {
   Upload,
   Download,
   AlertCircle,
+  Globe,
+  Linkedin,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
@@ -45,6 +50,14 @@ import {
   useSnapshotCacheTtl,
   useUpdateSnapshotCacheTtl,
 } from "@/lib/api/hooks/use-app-settings";
+import {
+  useUserProfile,
+  useUpdateUserProfile,
+} from "@/lib/api/hooks/use-user-profile";
+import {
+  useLinkedInSyncSettings,
+  useUpdateLinkedInSyncSettings,
+} from "@/lib/api/hooks/use-linkedin-sync-settings";
 
 export default function SettingsPage() {
   const { author, isLoading: authorLoading } = useAuthor();
@@ -66,6 +79,26 @@ export default function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
+  // Account settings
+  const { data: profile, isLoading: profileLoading } = useUserProfile();
+  const updateProfile = useUpdateUserProfile();
+  const [fullName, setFullName] = useState("");
+  const [timezone, setTimezone] = useState("America/New_York");
+  const [linkedinUrl, setLinkedinUrl] = useState("");
+  const [profileSaved, setProfileSaved] = useState(false);
+
+  // LinkedIn sync settings
+  const { data: syncSettings, isLoading: syncLoading } = useLinkedInSyncSettings();
+  const updateSync = useUpdateLinkedInSyncSettings();
+  const [syncMaxPosts, setSyncMaxPosts] = useState(20);
+  const [syncMaxComments, setSyncMaxComments] = useState(5);
+  const [syncMaxReactions, setSyncMaxReactions] = useState(5);
+  const [syncIncludeReposts, setSyncIncludeReposts] = useState(true);
+  const [syncIncludeQuotePosts, setSyncIncludeQuotePosts] = useState(true);
+  const [syncScrapeComments, setSyncScrapeComments] = useState(false);
+  const [syncScrapeReactions, setSyncScrapeReactions] = useState(false);
+  const [syncSaved, setSyncSaved] = useState(false);
+
   useEffect(() => {
     if (prefsData?.preferences) {
       setFast(prefsData.preferences.tier_fast);
@@ -73,6 +106,26 @@ export default function SettingsPage() {
       setWriting(prefsData.preferences.tier_writing);
     }
   }, [prefsData]);
+
+  useEffect(() => {
+    if (profile) {
+      setFullName(profile.full_name ?? "");
+      setTimezone(profile.timezone ?? "America/New_York");
+      setLinkedinUrl(profile.linkedin_url ?? "");
+    }
+  }, [profile]);
+
+  useEffect(() => {
+    if (syncSettings) {
+      setSyncMaxPosts(syncSettings.linkedin_sync_max_posts ?? 20);
+      setSyncMaxComments(syncSettings.linkedin_sync_max_comments ?? 5);
+      setSyncMaxReactions(syncSettings.linkedin_sync_max_reactions ?? 5);
+      setSyncIncludeReposts(syncSettings.linkedin_sync_include_reposts ?? true);
+      setSyncIncludeQuotePosts(syncSettings.linkedin_sync_include_quote_posts ?? true);
+      setSyncScrapeComments(syncSettings.linkedin_sync_scrape_comments ?? false);
+      setSyncScrapeReactions(syncSettings.linkedin_sync_scrape_reactions ?? false);
+    }
+  }, [syncSettings]);
 
   const models = modelsData?.models ?? [];
   const fastModels = models.filter((m) =>
@@ -160,6 +213,225 @@ export default function SettingsPage() {
             <p className="text-sm text-muted-foreground">
               No author profile found.
             </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Account Settings */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            <CardTitle className="text-sm">Account Settings</CardTitle>
+          </div>
+          <CardDescription>
+            Your personal account details.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {profileLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+          ) : (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="fullName" className="text-xs">Full Name</Label>
+                <Input
+                  id="fullName"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Your name"
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="timezone" className="text-xs">Timezone</Label>
+                <Select value={timezone} onValueChange={setTimezone}>
+                  <SelectTrigger className="h-8 text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="America/New_York">Eastern (New York)</SelectItem>
+                    <SelectItem value="America/Chicago">Central (Chicago)</SelectItem>
+                    <SelectItem value="America/Denver">Mountain (Denver)</SelectItem>
+                    <SelectItem value="America/Los_Angeles">Pacific (Los Angeles)</SelectItem>
+                    <SelectItem value="America/Anchorage">Alaska</SelectItem>
+                    <SelectItem value="Pacific/Honolulu">Hawaii</SelectItem>
+                    <SelectItem value="Europe/London">London (GMT)</SelectItem>
+                    <SelectItem value="Europe/Berlin">Berlin (CET)</SelectItem>
+                    <SelectItem value="Asia/Tokyo">Tokyo (JST)</SelectItem>
+                    <SelectItem value="Asia/Shanghai">Shanghai (CST)</SelectItem>
+                    <SelectItem value="Australia/Sydney">Sydney (AEDT)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="linkedinUrl" className="text-xs">LinkedIn URL</Label>
+                <Input
+                  id="linkedinUrl"
+                  value={linkedinUrl}
+                  onChange={(e) => setLinkedinUrl(e.target.value)}
+                  placeholder="https://linkedin.com/in/your-profile"
+                  className="h-8 text-sm"
+                />
+              </div>
+              <Button
+                onClick={() => {
+                  updateProfile.mutate(
+                    { full_name: fullName, timezone, linkedin_url: linkedinUrl },
+                    {
+                      onSuccess: () => {
+                        setProfileSaved(true);
+                        toast.success("Account settings saved");
+                        setTimeout(() => setProfileSaved(false), 2000);
+                      },
+                      onError: (err) =>
+                        toast.error(err instanceof Error ? err.message : "Failed to save"),
+                    }
+                  );
+                }}
+                disabled={updateProfile.isPending || profileSaved}
+                className="w-full gap-2"
+                size="sm"
+              >
+                {updateProfile.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : profileSaved ? (
+                  <Check className="h-3.5 w-3.5" />
+                ) : null}
+                {updateProfile.isPending ? "Saving..." : profileSaved ? "Saved" : "Save Account Settings"}
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* LinkedIn Sync Configuration */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Linkedin className="h-4 w-4" />
+            <CardTitle className="text-sm">LinkedIn Sync Configuration</CardTitle>
+          </div>
+          <CardDescription>
+            Default settings for LinkedIn performance data scraping.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {syncLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="syncMaxPosts" className="text-xs">Max Posts</Label>
+                  <Input
+                    id="syncMaxPosts"
+                    type="number"
+                    value={syncMaxPosts}
+                    onChange={(e) => setSyncMaxPosts(Number(e.target.value))}
+                    className="h-8 text-sm"
+                    min={1}
+                    max={100}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="syncMaxComments" className="text-xs">Max Comments</Label>
+                  <Input
+                    id="syncMaxComments"
+                    type="number"
+                    value={syncMaxComments}
+                    onChange={(e) => setSyncMaxComments(Number(e.target.value))}
+                    className="h-8 text-sm"
+                    min={0}
+                    max={50}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="syncMaxReactions" className="text-xs">Max Reactions</Label>
+                  <Input
+                    id="syncMaxReactions"
+                    type="number"
+                    value={syncMaxReactions}
+                    onChange={(e) => setSyncMaxReactions(Number(e.target.value))}
+                    className="h-8 text-sm"
+                    min={0}
+                    max={50}
+                  />
+                </div>
+              </div>
+              <Separator />
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm">Include Reposts</p>
+                    <p className="text-[10px] text-muted-foreground">Scrape reposted content</p>
+                  </div>
+                  <Switch checked={syncIncludeReposts} onCheckedChange={setSyncIncludeReposts} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm">Include Quote Posts</p>
+                    <p className="text-[10px] text-muted-foreground">Scrape quote posts</p>
+                  </div>
+                  <Switch checked={syncIncludeQuotePosts} onCheckedChange={setSyncIncludeQuotePosts} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm">Scrape Comments</p>
+                    <p className="text-[10px] text-muted-foreground">Collect post comments</p>
+                  </div>
+                  <Switch checked={syncScrapeComments} onCheckedChange={setSyncScrapeComments} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm">Scrape Reactions</p>
+                    <p className="text-[10px] text-muted-foreground">Collect post reactions</p>
+                  </div>
+                  <Switch checked={syncScrapeReactions} onCheckedChange={setSyncScrapeReactions} />
+                </div>
+              </div>
+              <Button
+                onClick={() => {
+                  updateSync.mutate(
+                    {
+                      linkedin_sync_max_posts: syncMaxPosts,
+                      linkedin_sync_max_comments: syncMaxComments,
+                      linkedin_sync_max_reactions: syncMaxReactions,
+                      linkedin_sync_include_reposts: syncIncludeReposts,
+                      linkedin_sync_include_quote_posts: syncIncludeQuotePosts,
+                      linkedin_sync_scrape_comments: syncScrapeComments,
+                      linkedin_sync_scrape_reactions: syncScrapeReactions,
+                    },
+                    {
+                      onSuccess: () => {
+                        setSyncSaved(true);
+                        toast.success("LinkedIn sync settings saved");
+                        setTimeout(() => setSyncSaved(false), 2000);
+                      },
+                      onError: (err) =>
+                        toast.error(err instanceof Error ? err.message : "Failed to save"),
+                    }
+                  );
+                }}
+                disabled={updateSync.isPending || syncSaved}
+                className="w-full gap-2"
+                size="sm"
+              >
+                {updateSync.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : syncSaved ? (
+                  <Check className="h-3.5 w-3.5" />
+                ) : null}
+                {updateSync.isPending ? "Saving..." : syncSaved ? "Saved" : "Save Sync Settings"}
+              </Button>
+            </>
           )}
         </CardContent>
       </Card>
