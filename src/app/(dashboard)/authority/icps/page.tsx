@@ -24,6 +24,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { useAuthor } from "@/hooks/use-author";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import {
   useICPs,
   useCreateICP,
@@ -677,6 +678,7 @@ export default function ICPsPage() {
           <div className="flex items-center gap-2">
             <Users className="h-6 w-6" />
             <h1 className="text-2xl font-bold">Target Audience</h1>
+            <AuthorSelector />
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             Your ideal customer profiles for targeted content creation

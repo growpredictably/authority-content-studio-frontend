@@ -4,6 +4,7 @@ import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthor } from "@/hooks/use-author";
+import { useAuthors, useSetPrimaryAuthor } from "@/lib/api/hooks/use-authors";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,14 +14,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Moon, Sun, LogOut, User } from "lucide-react";
+import { Moon, Sun, LogOut, User, ChevronDown, Star } from "lucide-react";
 import { MobileNav } from "./mobile-nav";
 
 export function Topbar() {
   const { theme, setTheme } = useTheme();
   const { author } = useAuthor();
+  const { data: authorsData } = useAuthors();
+  const setPrimary = useSetPrimaryAuthor();
   const router = useRouter();
   const supabase = createClient();
+  const authors = authorsData?.authors ?? [];
+  const hasMultipleAuthors = authors.length > 1;
 
   async function handleSignOut() {
     await supabase.auth.signOut();
@@ -41,9 +46,37 @@ export function Topbar() {
     <header className="flex h-14 items-center justify-between border-b bg-background px-4">
       <div className="flex items-center gap-2">
         <MobileNav />
-        <h1 className="text-sm font-medium text-muted-foreground hidden sm:block">
-          {author?.name ?? "Loading..."}
-        </h1>
+        {hasMultipleAuthors ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground hidden sm:flex">
+                {author?.name ?? "Loading..."}
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {authors.map((a) => (
+                <DropdownMenuItem
+                  key={a.id}
+                  onClick={() => {
+                    if (a.id !== author?.id) setPrimary.mutate(a.id);
+                  }}
+                  className="gap-2"
+                >
+                  {a.is_primary && <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />}
+                  {!a.is_primary && <span className="w-3" />}
+                  <span className={a.id === author?.id ? "font-medium" : ""}>
+                    {a.name}
+                  </span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <h1 className="text-sm font-medium text-muted-foreground hidden sm:block">
+            {author?.name ?? "Loading..."}
+          </h1>
+        )}
       </div>
 
       <div className="flex items-center gap-2">

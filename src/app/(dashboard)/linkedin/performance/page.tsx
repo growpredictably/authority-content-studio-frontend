@@ -20,6 +20,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuthor } from "@/hooks/use-author";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import { usePerformance } from "@/lib/api/hooks/use-performance";
 import { useSyncLinkedIn, getLinkedInProfileUrl } from "@/lib/api/hooks/use-sync-linkedin";
 import { usePerformanceIntel, useAnalyzePerformance } from "@/lib/api/hooks/use-performance-intel";
@@ -86,7 +87,10 @@ export default function PerformancePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Published Performance</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">Published Performance</h1>
+            <AuthorSelector />
+          </div>
           <p className="text-sm text-muted-foreground">
             Track engagement metrics for your LinkedIn posts
           </p>

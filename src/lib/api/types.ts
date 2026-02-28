@@ -505,6 +505,7 @@ export interface VoiceMiningRequest {
   author_id: string;
   user_id: string;
   extraction_focus: ("stories" | "beliefs" | "patterns")[];
+  ownership?: "self" | "reference";
 }
 
 export interface VoiceMiningResponse {

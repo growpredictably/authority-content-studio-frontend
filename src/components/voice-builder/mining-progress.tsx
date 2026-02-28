@@ -35,7 +35,7 @@ export function MiningProgress({ job }: MiningProgressProps) {
             ? "Mining Complete"
             : isFailed
               ? "Mining Failed"
-              : "Mining Your Voice DNA"}
+              : "Mining Your Voice"}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">

@@ -235,8 +235,8 @@ export function ExtractionReview({
           <Loader2 className="h-4 w-4 animate-spin" />
         ) : null}
         {isCommitting
-          ? "Committing to DNA..."
-          : `Commit ${acceptedCount} Elements to DNA`}
+          ? "Committing to Profile..."
+          : `Commit ${acceptedCount} Elements to Profile`}
       </Button>
     </div>
   );
@@ -255,7 +255,7 @@ export function CommitSummary({ categories, onReset }: CommitSummaryProps) {
       <CardHeader>
         <CardTitle className="text-sm flex items-center gap-2 text-green-600">
           <Check className="h-4 w-4" />
-          Voice DNA Updated
+          Voice Profile Updated
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -271,7 +271,7 @@ export function CommitSummary({ categories, onReset }: CommitSummaryProps) {
         </div>
         <p className="text-xs text-muted-foreground">
           Your Authority Packets and Gap Analysis will automatically update to
-          reflect the new DNA.
+          reflect the new voice data.
         </p>
         <Button onClick={onReset} variant="outline" className="w-full">
           Mine More Content

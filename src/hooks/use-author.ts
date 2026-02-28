@@ -19,14 +19,30 @@ export function useAuthor() {
 
       if (!user) return null;
 
-      const { data, error: dbError } = await supabase
+      // Prefer the primary author; fall back to first if is_primary not set
+      let { data, error: dbError } = await supabase
         .from("authors_dna")
         .select(
           "id, user_id, name, brand_id, archetype, archetype_description"
         )
         .eq("user_id", user.id)
+        .eq("is_primary", true)
         .limit(1)
-        .single();
+        .maybeSingle();
+
+      // Fallback: if no primary found (pre-migration), get the first one
+      if (!data && !dbError) {
+        const fallback = await supabase
+          .from("authors_dna")
+          .select(
+            "id, user_id, name, brand_id, archetype, archetype_description"
+          )
+          .eq("user_id", user.id)
+          .limit(1)
+          .maybeSingle();
+        data = fallback.data;
+        dbError = fallback.error;
+      }
 
       if (dbError) throw dbError;
       return data as Author;

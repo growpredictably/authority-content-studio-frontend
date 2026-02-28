@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { usePipeline } from "@/lib/content-pipeline/pipeline-context";
 import { useAutoSave } from "@/lib/content-pipeline/use-auto-save";
 import { useAuthor } from "@/hooks/use-author";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import { useGenerateOutline } from "@/lib/api/hooks/use-content-pipeline";
 import { OutlineViewer } from "@/components/content-pipeline/outline-viewer";
 import { ProgressDisplay } from "@/components/content-pipeline/progress-display";
@@ -93,6 +94,7 @@ export default function OutlinePage() {
       <div className="flex items-center gap-2">
         <BookOpen className="h-5 w-5" />
         <h2 className="text-xl font-semibold">Generate Outline</h2>
+        <AuthorSelector />
       </div>
 
       {generateOutline.isPending && (

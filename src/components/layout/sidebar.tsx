@@ -76,7 +76,7 @@ const navGroups: NavGroup[] = [
   {
     label: "Foundation",
     items: [
-      { label: "Voice DNA", href: "/voice", icon: Mic },
+      { label: "Voice Builder", href: "/voice", icon: Mic },
       { label: "Voice Profile", href: "/voice/profiles", icon: AudioWaveform },
       { label: "Transcriptions", href: "/voice/transcriptions", icon: FileText },
       { label: "Brain Builder", href: "/brain", icon: Brain },

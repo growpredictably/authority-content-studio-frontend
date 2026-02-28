@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { usePipeline } from "@/lib/content-pipeline/pipeline-context";
 import { useAutoSave } from "@/lib/content-pipeline/use-auto-save";
 import { useAuthor } from "@/hooks/use-author";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import { useGetAngles } from "@/lib/api/hooks/use-content-pipeline";
 import { useContentSessionDetail } from "@/lib/api/hooks/use-content-sessions";
 import { StrategySelector } from "@/components/content-pipeline/strategy-selector";
@@ -111,6 +112,7 @@ function AnglesPageInner() {
       <div className="flex items-center gap-2">
         <FileText className="h-5 w-5" />
         <h2 className="text-xl font-semibold">Get Angles</h2>
+        <AuthorSelector />
       </div>
 
       {!author ? (

@@ -23,6 +23,7 @@ import { Settings, User, Palette, Cpu, Loader2, Check } from "lucide-react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { useAuthor } from "@/hooks/use-author";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import {
   useModelPreferences,
   useAvailableModels,
@@ -94,6 +95,7 @@ export default function SettingsPage() {
       <div className="flex items-center gap-2">
         <Settings className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Settings</h1>
+        <AuthorSelector />
       </div>
 
       {/* Author Profile */}

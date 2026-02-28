@@ -6,6 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Package, Loader2, Hammer } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthor } from "@/hooks/use-author";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import {
   usePackets,
   useRebuildPacket,
@@ -84,6 +85,7 @@ export default function PacketsPage() {
         <div className="flex items-center gap-2">
           <Package className="h-6 w-6" />
           <h1 className="text-2xl font-bold">Authority Packets</h1>
+          <AuthorSelector />
         </div>
         <Button
           onClick={handleBuildAll}
@@ -110,7 +112,7 @@ export default function PacketsPage() {
           <Package className="h-12 w-12 mx-auto text-muted-foreground/40" />
           <p className="text-muted-foreground">
             No authority packets yet. Click &quot;Build All&quot; to generate
-            them from your Voice DNA.
+            them from your voice profile.
           </p>
         </div>
       ) : (

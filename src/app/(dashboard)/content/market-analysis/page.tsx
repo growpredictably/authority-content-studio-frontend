@@ -18,6 +18,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { useAuthor } from "@/hooks/use-author";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import {
   useMarketSessions,
   useMarketSessionDetail,
@@ -212,6 +213,7 @@ export default function MarketAnalysisPage() {
         <div className="flex items-center gap-2">
           <TrendingUp className="h-6 w-6" />
           <h1 className="text-2xl font-bold">Market Hunter</h1>
+          <AuthorSelector />
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           Find winning LinkedIn posts in your market for content inspiration

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Target } from "lucide-react";
 import { useAuthor } from "@/hooks/use-author";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import { useGapAnalysis } from "@/lib/api/hooks/use-authority";
 import { DnaUtilizationOverview } from "@/components/authority/dna-utilization-overview";
 import { PrioritizedActionsTabs } from "@/components/authority/prioritized-actions-tabs";
@@ -21,6 +22,7 @@ export default function GapsPage() {
       <div className="flex items-center gap-2">
         <Target className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Gap Analysis</h1>
+        <AuthorSelector />
       </div>
 
       {isLoading ? (

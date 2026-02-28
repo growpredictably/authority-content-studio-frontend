@@ -43,6 +43,7 @@ import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuthor } from "@/hooks/use-author";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import {
   useAllContent,
   useDeleteGeneratedPost,
@@ -363,6 +364,7 @@ export default function AllContentPage() {
         <div className="flex items-center gap-2">
           <FolderKanban className="h-6 w-6" />
           <h1 className="text-2xl font-bold">All Content</h1>
+          <AuthorSelector />
           {posts.length > 0 && (
             <span className="text-sm text-muted-foreground">
               ({posts.length})

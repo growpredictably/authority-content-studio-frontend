@@ -25,6 +25,7 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useAuthor } from "@/hooks/use-author";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import {
   useDrafts,
   useEmptyDraftsCount,
@@ -307,6 +308,7 @@ export default function DraftsPage() {
           <div className="flex items-center gap-2">
             <FolderOpen className="h-6 w-6" />
             <h1 className="text-2xl font-bold">Drafts</h1>
+            <AuthorSelector />
           </div>
           {!isLoading && (
             <p className="text-sm text-muted-foreground mt-1">

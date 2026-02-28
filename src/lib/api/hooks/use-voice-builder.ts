@@ -146,7 +146,7 @@ export function useVoiceProfile(authorId: string | undefined) {
       const { data, error } = await supabase
         .from("authors_dna")
         .select(
-          "id, name, tone, stories, perspectives, quotes, knowledge, experience, preferences"
+          "id, name, tone, stories, perspectives, quotes, knowledge, experience, preferences, frameworks"
         )
         .eq("id", authorId!)
         .single();
@@ -158,13 +158,36 @@ export function useVoiceProfile(authorId: string | undefined) {
   });
 }
 
-/** Trigger a full voice re-synthesis. */
+/** Update a single DNA section (e.g. stories, tone) directly. */
+export function useUpdateDnaSection() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      author_id: string;
+      section_key: string;
+      data: unknown;
+    }) => {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("authors_dna")
+        .update({ [payload.section_key]: payload.data })
+        .eq("id", payload.author_id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["voice-profile"] });
+    },
+  });
+}
+
+/** Trigger a full voice re-synthesis (or partial with exclude). */
 export function useResynthesizeVoice() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: {
       author_id: string;
       user_id: string;
+      exclude?: string[];
     }) => {
       const token = await getToken();
       return apiCall<{ success: boolean; tracking_id: string }>(

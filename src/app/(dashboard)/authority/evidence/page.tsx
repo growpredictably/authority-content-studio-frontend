@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Radar, Search, ExternalLink, BookmarkPlus, Zap, ShieldAlert } from "lucide-react";
 import { useAuthor } from "@/hooks/use-author";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import { useRadarScan } from "@/lib/api/hooks/use-evidence";
 import { useCommitKnowledge } from "@/lib/api/hooks/use-brain-builder";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,7 @@ export default function EvidenceFeedPage() {
       <div className="flex items-center gap-2">
         <Radar className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Evidence Feed</h1>
+        <AuthorSelector />
       </div>
 
       <p className="text-sm text-muted-foreground max-w-2xl">

@@ -61,6 +61,7 @@ import {
   Blocks,
 } from "lucide-react";
 import { useAuthor } from "@/hooks/use-author";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import {
   useFirefliesTranscriptions,
   useMeetingTypeCounts,
@@ -622,6 +623,7 @@ export default function TranscriptionsPage() {
         <div className="flex items-center gap-2">
           <Headphones className="h-6 w-6" />
           <h1 className="text-2xl font-bold">Fireflies Transcriptions</h1>
+          <AuthorSelector />
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
           View and manage meeting transcripts from Fireflies.ai

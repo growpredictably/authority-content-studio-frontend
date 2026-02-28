@@ -13,6 +13,7 @@ import {
   Search,
 } from "lucide-react";
 import { useAuthor } from "@/hooks/use-author";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import { usePackets } from "@/lib/api/hooks/use-authority";
 import { AuthorityScore } from "@/components/command-center/authority-score";
 import { PacketHealthSummary } from "@/components/authority/packet-health-summary";
@@ -38,6 +39,7 @@ export default function AuthorityOverviewPage() {
       <div className="flex items-center gap-2">
         <TrendingUp className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Authority Engine</h1>
+        <AuthorSelector />
       </div>
 
       {isLoading ? (

@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Mic } from "lucide-react";
 import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import { useAuthor } from "@/hooks/use-author";
 import {
   useStartMining,
@@ -16,6 +19,7 @@ import {
 import {
   VoiceInputTabs,
   type VoiceSourceType,
+  type VoiceOwnership,
 } from "@/components/voice-builder/voice-input-tabs";
 import { MiningProgress } from "@/components/voice-builder/mining-progress";
 import {
@@ -32,7 +36,12 @@ import type {
 
 type Stage = "input" | "mining" | "review" | "committed";
 
-export default function VoiceBuilderPage() {
+function VoiceBuilderContent() {
+  const searchParams = useSearchParams();
+  const initialContent = searchParams.get("initialContent") || searchParams.get("prompt") || "";
+  const sourceType = searchParams.get("sourceType") || "";
+  const initialTab = sourceType === "youtube" ? "youtube" : initialContent ? "text" : undefined;
+
   const { author } = useAuthor();
   const startMining = useStartMining();
   const transcribeAudio = useTranscribeAudio();
@@ -48,6 +57,7 @@ export default function VoiceBuilderPage() {
   const [pendingIngestData, setPendingIngestData] =
     useState<VoiceIngestData | null>(null);
   const [committedCategories, setCommittedCategories] = useState<string[]>([]);
+  const [isUploadingExcel, setIsUploadingExcel] = useState(false);
 
   const { data: miningJob } = useMiningStatus(
     jobId,
@@ -64,7 +74,7 @@ export default function VoiceBuilderPage() {
     setStage("review");
   }
 
-  function handleSubmit(sourceType: VoiceSourceType, content: string) {
+  function handleSubmit(sourceType: VoiceSourceType, content: string, ownership: VoiceOwnership = "self") {
     if (!author) return;
 
     // URL scrape goes through the scraper first, then mine as text
@@ -77,6 +87,7 @@ export default function VoiceBuilderPage() {
         author_id: author.id,
         user_id: author.user_id,
         extraction_focus: ["stories", "beliefs", "patterns"],
+        ownership,
       },
       {
         onSuccess: (res) => {
@@ -92,7 +103,7 @@ export default function VoiceBuilderPage() {
     );
   }
 
-  function handleAudioRecorded(audioBlob: Blob) {
+  function handleAudioRecorded(audioBlob: Blob, ownership: VoiceOwnership = "self") {
     if (!author) return;
 
     transcribeAudio.mutate(
@@ -105,7 +116,7 @@ export default function VoiceBuilderPage() {
           }
           toast.success(`Transcribed ${res.duration_seconds ? Math.round(res.duration_seconds) + "s" : ""} of audio`);
           // Now mine the transcript
-          handleSubmit("text", res.transcript);
+          handleSubmit("text", res.transcript, ownership);
         },
         onError: (err) => {
           toast.error(
@@ -114,6 +125,44 @@ export default function VoiceBuilderPage() {
         },
       }
     );
+  }
+
+  async function handleExcelUpload(file: File) {
+    if (!author) return;
+    setIsUploadingExcel(true);
+    try {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Not authenticated");
+
+      const formData = new FormData();
+      formData.append("mode", "excel");
+      formData.append("author_id", author.id);
+      formData.append("user_id", author.user_id);
+      formData.append("file", file);
+
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+      const res = await fetch(`${backendUrl}/v1/voice-builder`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || "Upload failed");
+      }
+
+      const result = await res.json();
+      const categories = result?.data?.categories_updated || [];
+      setCommittedCategories(categories);
+      setStage("committed");
+      toast.success(`Excel processed: ${categories.length} categories updated`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Excel upload failed");
+    } finally {
+      setIsUploadingExcel(false);
+    }
   }
 
   function handleCommit(accepted: VoiceIngestData) {
@@ -137,7 +186,7 @@ export default function VoiceBuilderPage() {
                 .stats.categories_updated
             );
             setStage("committed");
-            toast.success("Voice DNA updated successfully");
+            toast.success("Voice profile updated successfully");
           }
         },
         onError: (err) => {
@@ -189,7 +238,8 @@ export default function VoiceBuilderPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <Mic className="h-6 w-6" />
-        <h1 className="text-2xl font-bold">Voice DNA</h1>
+        <h1 className="text-2xl font-bold">Voice Builder</h1>
+        <AuthorSelector />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
@@ -207,6 +257,10 @@ export default function VoiceBuilderPage() {
                   isSubmitting={startMining.isPending}
                   onAudioRecorded={handleAudioRecorded}
                   isTranscribing={transcribeAudio.isPending}
+                  onExcelUpload={handleExcelUpload}
+                  isUploadingExcel={isUploadingExcel}
+                  initialContent={initialContent}
+                  initialTab={initialTab}
                 />
               </CardContent>
             </Card>
@@ -270,6 +324,14 @@ export default function VoiceBuilderPage() {
         isResolving={resolveConflicts.isPending}
       />
     </div>
+  );
+}
+
+export default function VoiceBuilderPage() {
+  return (
+    <Suspense>
+      <VoiceBuilderContent />
+    </Suspense>
   );
 }
 

@@ -47,6 +47,7 @@ import {
   Headphones,
 } from "lucide-react";
 import { useAuthor } from "@/hooks/use-author";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import {
   useFrameworks,
   useCreateFramework,
@@ -801,6 +802,7 @@ export default function FrameworksPage() {
           <div className="flex items-center gap-2">
             <Layers className="h-6 w-6" />
             <h1 className="text-2xl font-bold">Frameworks</h1>
+            <AuthorSelector />
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
             Your signature thinking models that codify your methodology

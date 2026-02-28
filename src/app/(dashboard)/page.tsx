@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiGetPublic } from "@/lib/api/client";
 import { useAuthor } from "@/hooks/use-author";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import type { HealthResponse } from "@/lib/api/types";
 import {
   Card,
@@ -75,7 +76,7 @@ const quickLinks = [
   },
   {
     label: "Voice Builder",
-    description: "Build and refine your unique voice DNA",
+    description: "Build and refine your unique voice profile",
     href: "/voice",
     icon: Mic,
     accent: "text-cyan-600",
@@ -130,6 +131,7 @@ export default function CommandCenterPage() {
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <LayoutDashboard className="h-6 w-6" />
             Command Center
+            <AuthorSelector />
           </h1>
           <p className="text-muted-foreground mt-1">
             {isLoading

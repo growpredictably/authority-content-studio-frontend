@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import { Brain } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthor } from "@/hooks/use-author";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import {
   useCurateUrl,
   useCommitKnowledge,
@@ -76,6 +77,7 @@ export default function BrainBuilderPage() {
       <div className="flex items-center gap-2">
         <Brain className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Brain Builder</h1>
+        <AuthorSelector />
       </div>
 
       <UrlCurateForm

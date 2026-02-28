@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Sparkles } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuthor } from "@/hooks/use-author";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import { useDriftScan } from "@/lib/api/hooks/use-optimizer";
 import { LinkedInUploader } from "@/components/optimizer/linkedin-uploader";
 import { SectionViewer } from "@/components/optimizer/section-viewer";
@@ -50,6 +51,7 @@ export default function OptimizerPage() {
       <div className="flex items-center gap-2">
         <Sparkles className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Optimizer</h1>
+        <AuthorSelector />
       </div>
 
       <Tabs defaultValue="scan">

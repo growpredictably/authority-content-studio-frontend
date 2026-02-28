@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { usePipeline } from "@/lib/content-pipeline/pipeline-context";
 import { useAutoSave } from "@/lib/content-pipeline/use-auto-save";
 import { useAuthor } from "@/hooks/use-author";
+import { AuthorSelector } from "@/components/shared/author-selector";
 import {
   useWritePost,
   useWriteArticle,
@@ -106,6 +107,7 @@ export default function WritePage() {
         <h2 className="text-xl font-semibold">
           {isPost ? "Write Post" : "Write Article"}
         </h2>
+        <AuthorSelector />
       </div>
 
       {isWriting && (
