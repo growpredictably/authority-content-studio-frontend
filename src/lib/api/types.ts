@@ -192,6 +192,22 @@ export interface LeverageResponse {
   generated_at: string;
 }
 
+// ─── Saved Actions Types ──────────────────────────────────────
+
+export interface SavedAction {
+  id: string;
+  author_id: string;
+  action_payload: SyncAction;
+  note?: string;
+  saved_at: string;
+}
+
+export interface SavedActionsResponse {
+  success: boolean;
+  author_id: string;
+  saved_actions: SavedAction[];
+}
+
 // ─── Content Pipeline Types ────────────────────────────────────
 
 export type ContentStrategy =
@@ -422,6 +438,7 @@ export interface PacketGap {
   prediction_confidence?: number;
   brain_candidates: unknown[];
   has_unlinked_knowledge: boolean;
+  gap_action_id?: string;
 }
 
 export interface ContentPriority {

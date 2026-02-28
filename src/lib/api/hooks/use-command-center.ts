@@ -2,7 +2,8 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
-import { apiGet, apiCall } from "@/lib/api/client";
+import { apiGet, apiCall, apiDelete } from "@/lib/api/client";
+import { deleteSnapshot } from "@/lib/api/snapshot-cache";
 import type {
   AuthorityScoreResponse,
   DailySyncResponse,
@@ -10,6 +11,10 @@ import type {
   ActionCompleteResponse,
   LeverageResponse,
   HabitStats,
+  RadarScanRequest,
+  RadarScanResponse,
+  SavedActionsResponse,
+  SyncAction,
 } from "@/lib/api/types";
 
 async function getToken(): Promise<string> {
@@ -85,6 +90,71 @@ export function useHabitStats(authorId: string | undefined) {
   });
 }
 
+/** POST /v1/habits/radar/scan */
+export function useRadarScan() {
+  return useMutation({
+    mutationFn: async (request: RadarScanRequest) => {
+      const token = await getToken();
+      return apiCall<RadarScanResponse>(
+        "/v1/habits/radar/scan",
+        request as unknown as Record<string, unknown>,
+        token
+      );
+    },
+  });
+}
+
+/** GET /v1/habits/saved/{author_id} */
+export function useSavedActions(authorId: string | undefined) {
+  return useQuery({
+    queryKey: ["saved-actions", authorId],
+    queryFn: async () => {
+      const token = await getToken();
+      return apiGet<SavedActionsResponse>(
+        `/v1/habits/saved/${authorId}`,
+        token
+      );
+    },
+    enabled: !!authorId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+/** POST /v1/habits/saved */
+export function useSaveAction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (request: { author_id: string; action_payload: SyncAction; note?: string }) => {
+      const token = await getToken();
+      return apiCall<{ success: boolean; id: string }>(
+        "/v1/habits/saved",
+        request as unknown as Record<string, unknown>,
+        token
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["saved-actions"] });
+    },
+  });
+}
+
+/** DELETE /v1/habits/saved/{action_id} */
+export function useDismissSavedAction() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (actionId: string) => {
+      const token = await getToken();
+      return apiDelete<{ success: boolean }>(
+        `/v1/habits/saved/${actionId}`,
+        token
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["saved-actions"] });
+    },
+  });
+}
+
 /** POST /v1/habits/action/complete */
 export function useCompleteAction() {
   const queryClient = useQueryClient();
@@ -97,11 +167,14 @@ export function useCompleteAction() {
         token
       );
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      // CLARIFY actions change gap data — delete snapshot so next visit fetches fresh
+      deleteSnapshot(variables.author_id, "gap_analysis").catch(() => {});
       queryClient.invalidateQueries({ queryKey: ["daily-sync"] });
       queryClient.invalidateQueries({ queryKey: ["authority-score"] });
       queryClient.invalidateQueries({ queryKey: ["leverage"] });
       queryClient.invalidateQueries({ queryKey: ["habit-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["gap-analysis"] });
     },
   });
 }

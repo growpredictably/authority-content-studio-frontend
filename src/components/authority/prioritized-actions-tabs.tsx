@@ -30,7 +30,7 @@ export function PrioritizedActionsTabs({
   function handleMarkComplete(gap: PacketGap) {
     setCompletingId(gap.packet_id);
     markComplete.mutate(
-      { author_id: authorId, gap_action_id: gap.packet_id },
+      { author_id: authorId, gap_action_id: gap.gap_action_id ?? gap.packet_id },
       {
         onSuccess: () => {
           toast.success("Action marked complete");

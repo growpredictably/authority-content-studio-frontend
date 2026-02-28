@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { Settings, User, Palette, Cpu, Loader2, Check } from "lucide-react";
+import { Settings, User, Palette, Cpu, Database, Loader2, Check } from "lucide-react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { useAuthor } from "@/hooks/use-author";
@@ -29,6 +29,10 @@ import {
   useAvailableModels,
   useUpdateModelPreferences,
 } from "@/lib/api/hooks/use-settings";
+import {
+  useSnapshotCacheTtl,
+  useUpdateSnapshotCacheTtl,
+} from "@/lib/api/hooks/use-app-settings";
 
 export default function SettingsPage() {
   const { author, isLoading: authorLoading } = useAuthor();
@@ -38,11 +42,14 @@ export default function SettingsPage() {
   );
   const { data: modelsData } = useAvailableModels();
   const updatePrefs = useUpdateModelPreferences();
+  const { data: cacheTtl } = useSnapshotCacheTtl();
+  const updateCacheTtl = useUpdateSnapshotCacheTtl();
 
   const [fast, setFast] = useState("");
   const [research, setResearch] = useState("");
   const [writing, setWriting] = useState("");
   const [prefsSaved, setPrefsSaved] = useState(false);
+  const [cacheSaved, setCacheSaved] = useState(false);
 
   useEffect(() => {
     if (prefsData?.preferences) {
@@ -231,6 +238,70 @@ export default function SettingsPage() {
                     : "Save Preferences"}
               </Button>
             </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Cache Settings */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Database className="h-4 w-4" />
+            <CardTitle className="text-sm">Cache Settings</CardTitle>
+          </div>
+          <CardDescription>
+            Control how long expensive backend responses are cached before
+            re-fetching.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Gap Analysis TTL</p>
+              <p className="text-[10px] text-muted-foreground">
+                How long gap analysis results are cached before a fresh
+                backend call
+              </p>
+            </div>
+            <Select
+              value={String(cacheTtl?.gap_analysis_hours ?? 24)}
+              onValueChange={(v) => {
+                const hours = Number(v);
+                updateCacheTtl.mutate(
+                  { gap_analysis_hours: hours },
+                  {
+                    onSuccess: () => {
+                      setCacheSaved(true);
+                      toast.success(`Cache TTL updated to ${hours}h`);
+                      setTimeout(() => setCacheSaved(false), 2000);
+                    },
+                    onError: (err) => {
+                      toast.error(
+                        err instanceof Error
+                          ? err.message
+                          : "Failed to update cache TTL"
+                      );
+                    },
+                  }
+                );
+              }}
+            >
+              <SelectTrigger className="w-[140px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 hour</SelectItem>
+                <SelectItem value="6">6 hours</SelectItem>
+                <SelectItem value="12">12 hours</SelectItem>
+                <SelectItem value="24">24 hours</SelectItem>
+                <SelectItem value="48">48 hours</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {cacheSaved && (
+            <p className="text-[10px] text-green-600 mt-2 flex items-center gap-1">
+              <Check className="h-3 w-3" /> Saved
+            </p>
           )}
         </CardContent>
       </Card>

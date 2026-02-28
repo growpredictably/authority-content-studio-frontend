@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Target } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Target, RefreshCw } from "lucide-react";
 import { useAuthor } from "@/hooks/use-author";
 import { AuthorSelector } from "@/components/shared/author-selector";
 import { useGapAnalysis } from "@/lib/api/hooks/use-authority";
+import { deleteSnapshot } from "@/lib/api/snapshot-cache";
 import { DnaUtilizationOverview } from "@/components/authority/dna-utilization-overview";
 import { PrioritizedActionsTabs } from "@/components/authority/prioritized-actions-tabs";
 import { PotentialThemesSection } from "@/components/authority/potential-themes-section";
@@ -14,8 +17,15 @@ import type { PacketGap } from "@/lib/api/types";
 
 export default function GapsPage() {
   const { author } = useAuthor();
-  const { data, isLoading } = useGapAnalysis(author?.id);
+  const queryClient = useQueryClient();
+  const { data, isLoading, isFetching } = useGapAnalysis(author?.id);
   const [remediateGap, setRemediateGap] = useState<PacketGap | null>(null);
+
+  async function handleRefresh() {
+    if (!author) return;
+    await deleteSnapshot(author.id, "gap_analysis");
+    queryClient.invalidateQueries({ queryKey: ["gap-analysis"] });
+  }
 
   return (
     <div className="space-y-6">
@@ -23,6 +33,19 @@ export default function GapsPage() {
         <Target className="h-6 w-6" />
         <h1 className="text-2xl font-bold">Gap Analysis</h1>
         <AuthorSelector />
+        {author && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={isLoading || isFetching}
+            title="Refresh gap analysis"
+          >
+            <RefreshCw
+              className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+            />
+          </Button>
+        )}
       </div>
 
       {isLoading ? (

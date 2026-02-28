@@ -38,7 +38,7 @@ export function GapRemediateDialog({
     remediate.mutate(
       {
         author_id: authorId,
-        gap_action_id: gap.packet_id,
+        gap_action_id: gap.gap_action_id ?? gap.packet_id,
         content: content.trim(),
         source: "inline_fix",
       },
