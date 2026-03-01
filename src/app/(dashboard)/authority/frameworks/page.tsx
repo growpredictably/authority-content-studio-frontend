@@ -81,6 +81,18 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
+// ─── Enrichable Field Options ────────────────────────────────────
+
+const ENRICHABLE_FIELD_OPTIONS = [
+  { key: "key_components", label: "Key Components", description: "New points, examples, sub-components, best practices, mistakes" },
+  { key: "applications", label: "Applications", description: "New use cases and contexts" },
+  { key: "implementation", label: "Implementation", description: "New implementation steps" },
+  { key: "analogies", label: "Analogies", description: "New metaphors and comparisons" },
+  { key: "tags", label: "Tags", description: "New keywords" },
+  { key: "quote", label: "Quote", description: "New quote (only if currently empty)" },
+  { key: "further_context", label: "Further Context", description: "Intellectual connections, supplementary theory, reasoning" },
+] as const;
+
 // ─── Utility ────────────────────────────────────────────────────
 
 function safeComponents(val: unknown): FrameworkComponent[] {
@@ -479,9 +491,9 @@ function FrameworkDetail({
         </Section>
       )}
 
-      {/* Further Context */}
+      {/* Further Context & Connections */}
       {fw.further_context && (
-        <Section icon={BookOpen} title="Further Context">
+        <Section icon={BookOpen} title="Further Context & Connections">
           <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
             {fw.further_context}
           </p>
@@ -608,9 +620,26 @@ function FrameworkFormDialog({
   // AI generation / enrichment
   const [aiTranscriptId, setAiTranscriptId] = useState("");
   const [aiBatch, setAiBatch] = useState(false);
+  const [fieldsToEnhance, setFieldsToEnhance] = useState<Set<string>>(
+    new Set(ENRICHABLE_FIELD_OPTIONS.map(f => f.key))
+  );
   const extractFramework = useExtractFramework();
   const enrichFramework = useEnrichFramework();
   const { data: transcripts } = useTranscriptionList(userId);
+
+  const toggleField = (key: string) => {
+    setFieldsToEnhance((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+  const allFieldsSelected = fieldsToEnhance.size === ENRICHABLE_FIELD_OPTIONS.length;
+  const toggleAllFields = () => {
+    if (allFieldsSelected) setFieldsToEnhance(new Set());
+    else setFieldsToEnhance(new Set(ENRICHABLE_FIELD_OPTIONS.map(f => f.key)));
+  };
 
   const aiPending = extractFramework.isPending || enrichFramework.isPending;
   const isPending = createMutation.isPending || updateMutation.isPending || aiPending;
@@ -671,12 +700,18 @@ function FrameworkFormDialog({
 
   const handleAiEnrich = () => {
     if (!aiTranscriptId || !framework) { toast.error("Select a transcript first"); return; }
+    if (fieldsToEnhance.size === 0) { toast.error("Select at least one field to enhance"); return; }
+
+    // Send null when all fields selected (backwards compat, no unnecessary prompt padding)
+    const selectedFields = allFieldsSelected ? undefined : Array.from(fieldsToEnhance);
+
     enrichFramework.mutate(
       {
         frameworkId: framework.id,
         transcriptionId: Number(aiTranscriptId),
         authorId,
         useBatch: aiBatch,
+        fieldsToEnhance: selectedFields,
       },
       {
         onSuccess: (result) => {
@@ -749,6 +784,39 @@ function FrameworkFormDialog({
                     Use batch processing (50% cheaper, ~24 hours)
                   </Label>
                 </div>
+                {isEdit && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs text-muted-foreground">Fields to enhance</Label>
+                      <button
+                        type="button"
+                        onClick={toggleAllFields}
+                        className="text-[10px] text-primary hover:underline"
+                      >
+                        {allFieldsSelected ? "Deselect all" : "Select all"}
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                      {ENRICHABLE_FIELD_OPTIONS.map((field) => (
+                        <div key={field.key} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`enrich-${field.key}`}
+                            checked={fieldsToEnhance.has(field.key)}
+                            onCheckedChange={() => toggleField(field.key)}
+                            disabled={aiPending}
+                          />
+                          <Label
+                            htmlFor={`enrich-${field.key}`}
+                            className="text-xs font-normal cursor-pointer text-muted-foreground"
+                            title={field.description}
+                          >
+                            {field.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <Button
                   type="button"
                   variant="outline"
@@ -798,7 +866,13 @@ function FrameworkFormDialog({
 
           {/* Tags & Context */}
           <div><Label htmlFor="fw-tags">Tags (comma-separated)</Label><Input id="fw-tags" placeholder="e.g. messaging, positioning, clarity" value={form.tags_keywords} onChange={(e) => setForm({ ...form, tags_keywords: e.target.value })} /></div>
-          <div><Label htmlFor="fw-context">Further Context</Label><Textarea id="fw-context" placeholder="Additional context, background, or notes" value={form.further_context} onChange={(e) => setForm({ ...form, further_context: e.target.value })} rows={3} /></div>
+          <div>
+            <Label htmlFor="fw-context">Further Context</Label>
+            <p className="text-[11px] text-muted-foreground mb-1.5">
+              Intellectual connections, supplementary theory, origin story, and practical nuances
+            </p>
+            <Textarea id="fw-context" placeholder="How does this framework connect to other theories? What's the origin story? Any edge cases or audience-specific adaptations?" value={form.further_context} onChange={(e) => setForm({ ...form, further_context: e.target.value })} rows={4} />
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>Cancel</Button>

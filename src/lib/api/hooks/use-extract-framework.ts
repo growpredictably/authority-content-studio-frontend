@@ -51,6 +51,7 @@ export function useEnrichFramework() {
       transcriptionId: number;
       authorId: string;
       useBatch?: boolean;
+      fieldsToEnhance?: string[];
     }) => {
       const token = await getToken();
       return apiCall<BrandFramework | BatchJobResponse>(
@@ -59,6 +60,7 @@ export function useEnrichFramework() {
           transcription_id: payload.transcriptionId,
           author_id: payload.authorId,
           use_batch: payload.useBatch ?? false,
+          fields_to_enhance: payload.fieldsToEnhance ?? null,
         },
         token
       );
