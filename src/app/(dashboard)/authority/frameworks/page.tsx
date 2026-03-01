@@ -651,21 +651,16 @@ function FrameworkFormDialog({
   };
 
   const toggleTranscript = (id: number) => {
-    if (isEdit) {
-      setSelectedTranscriptIds((prev) => {
-        if (prev.includes(id)) return prev.filter((x) => x !== id);
-        if (prev.length >= 5) {
-          toast.error("Maximum 5 transcripts per enrichment");
-          return prev;
-        }
-        const next = [...prev, id];
-        if (next.length > 1) setAiBatch(false);
-        return next;
-      });
-    } else {
-      setSelectedTranscriptIds([id]);
-      setTranscriptSearchOpen(false);
-    }
+    setSelectedTranscriptIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= 5) {
+        toast.error("Maximum 5 transcripts");
+        return prev;
+      }
+      const next = [...prev, id];
+      if (next.length > 1) setAiBatch(false);
+      return next;
+    });
   };
 
   const removeTranscript = (id: number) => {
@@ -784,7 +779,7 @@ function FrameworkFormDialog({
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">
-                    {isEdit ? "Select Fireflies transcript(s)" : "Select a Fireflies transcript"}
+                    Select Fireflies transcript(s)
                   </Label>
                   <Popover open={transcriptSearchOpen} onOpenChange={setTranscriptSearchOpen}>
                     <PopoverTrigger asChild>
@@ -796,7 +791,7 @@ function FrameworkFormDialog({
                         disabled={aiPending}
                       >
                         {selectedTranscriptIds.length === 0
-                          ? (isEdit ? "Choose transcript(s)..." : "Choose a transcript...")
+                          ? "Choose transcript(s)..."
                           : selectedTranscriptIds.length === 1
                             ? (transcripts?.find((t) => t.id === selectedTranscriptIds[0])?.title ?? "1 selected")
                             : `${selectedTranscriptIds.length} transcript(s) selected`}
@@ -830,8 +825,8 @@ function FrameworkFormDialog({
                       </Command>
                     </PopoverContent>
                   </Popover>
-                  {/* Selected transcript badges (enrich mode) */}
-                  {isEdit && selectedTranscriptIds.length > 0 && (
+                  {/* Selected transcript badges */}
+                  {selectedTranscriptIds.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
                       {selectedTranscriptIds.map((id, idx) => {
                         const tx = transcripts?.find((t) => t.id === id);
@@ -875,10 +870,9 @@ function FrameworkFormDialog({
                     )}
                   </Label>
                 </div>
-                {isEdit && (
-                  <div className="space-y-2">
+                <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label className="text-xs text-muted-foreground">Fields to enhance</Label>
+                      <Label className="text-xs text-muted-foreground">{isEdit ? "Fields to enhance" : "Fields to generate"}</Label>
                       <button
                         type="button"
                         onClick={toggleAllFields}
@@ -907,7 +901,6 @@ function FrameworkFormDialog({
                       ))}
                     </div>
                   </div>
-                )}
                 <Button
                   type="button"
                   variant="outline"
@@ -922,7 +915,9 @@ function FrameworkFormDialog({
                     ? (selectedTranscriptIds.length > 1
                         ? `Enrich from ${selectedTranscriptIds.length} Transcripts`
                         : "Enrich with AI")
-                    : "Generate with AI"}
+                    : (selectedTranscriptIds.length > 1
+                        ? `Generate from ${selectedTranscriptIds.length} Transcripts`
+                        : "Generate with AI")}
                 </Button>
               </div>
 
