@@ -13,8 +13,15 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Progress } from "@/components/ui/progress";
-import { Lightbulb, ArrowRight, ExternalLink } from "lucide-react";
+import {
+  Lightbulb,
+  ExternalLink,
+  HelpCircle,
+  CheckCircle2,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import type { SyncAction } from "@/lib/api/types";
 
 interface ClarifyActionDrawerProps {
@@ -25,6 +32,58 @@ interface ClarifyActionDrawerProps {
   onSkip: () => void;
   isPending: boolean;
 }
+
+/** Generate guiding questions based on the action's gap type and theme. */
+function getGuidingQuestions(action: SyncAction): string[] {
+  const theme = action.theme;
+  const gapType = action.gap_type ?? "";
+
+  const questions: string[] = [];
+
+  // Gap-type specific questions
+  if (gapType.includes("story") || gapType.includes("anchor")) {
+    questions.push(
+      "What specific moment or experience shaped this belief for you?",
+      "What did you see, feel, or learn that made this real — not just theoretical?"
+    );
+  } else if (gapType.includes("belief") || gapType.includes("perspective")) {
+    questions.push(
+      "Why do you hold this belief? What evidence have you seen?",
+      "How would you explain this to someone who disagrees?"
+    );
+  } else if (gapType.includes("framework") || gapType.includes("method")) {
+    questions.push(
+      "What steps or principles make this approach work?",
+      "What mistake do people commonly make that this framework prevents?"
+    );
+  }
+
+  // Theme-aware question
+  if (theme) {
+    questions.push(
+      `How does this connect to your bigger vision around "${theme}"?`
+    );
+  }
+
+  // Fallback questions if none matched
+  if (questions.length === 0) {
+    questions.push(
+      "What personal experience or example best illustrates your point?",
+      "What would someone need to understand to truly get this?",
+      "What makes your perspective on this different from the mainstream?"
+    );
+  }
+
+  return questions.slice(0, 3);
+}
+
+/** Starter phrases the user can click to pre-fill the textarea. */
+const starterPhrases = [
+  "In my experience...",
+  "I learned this when...",
+  "The key insight is...",
+  "What most people miss is...",
+];
 
 export function ClarifyActionDrawer({
   action,
@@ -39,6 +98,7 @@ export function ClarifyActionDrawer({
   const coherenceBefore = action.impact_delta?.before ?? 0;
   const coherenceAfter = action.impact_delta?.after ?? 0;
   const lift = coherenceAfter - coherenceBefore;
+  const guidingQuestions = getGuidingQuestions(action);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -70,6 +130,52 @@ export function ClarifyActionDrawer({
             </div>
           </div>
 
+          {/* Guiding questions */}
+          <div>
+            <h4 className="text-sm font-medium mb-2 flex items-center gap-1.5">
+              <HelpCircle className="h-3.5 w-3.5 text-amber-600" />
+              Think about...
+            </h4>
+            <ul className="space-y-1.5">
+              {guidingQuestions.map((q, i) => (
+                <li
+                  key={i}
+                  className="text-xs text-muted-foreground pl-3 border-l-2 border-amber-200 dark:border-amber-800"
+                >
+                  {q}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* What makes a great answer */}
+          <div>
+            <h4 className="text-sm font-medium mb-2 flex items-center gap-1.5">
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+              What makes a great answer
+            </h4>
+            <ul className="space-y-1 text-xs text-muted-foreground">
+              <li className="flex items-start gap-1.5">
+                <span className="text-green-600 mt-0.5">-</span>
+                <span>
+                  <span className="font-medium text-foreground">Be specific</span> — a real example beats a general statement
+                </span>
+              </li>
+              <li className="flex items-start gap-1.5">
+                <span className="text-green-600 mt-0.5">-</span>
+                <span>
+                  <span className="font-medium text-foreground">Share your experience</span> — what you saw, did, or learned firsthand
+                </span>
+              </li>
+              <li className="flex items-start gap-1.5">
+                <span className="text-green-600 mt-0.5">-</span>
+                <span>
+                  <span className="font-medium text-foreground">Connect the dots</span> — tie it back to what you believe and why
+                </span>
+              </li>
+            </ul>
+          </div>
+
           {/* Impact visualization */}
           {action.impact_delta && (
             <div>
@@ -77,7 +183,7 @@ export function ClarifyActionDrawer({
               <div className="space-y-3">
                 <div>
                   <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                    <span>Current coherence</span>
+                    <span>Current authority strength</span>
                     <span className="tabular-nums">{(coherenceBefore * 100).toFixed(0)}%</span>
                   </div>
                   <Progress value={coherenceBefore * 100} className="h-2" />
@@ -118,6 +224,36 @@ export function ClarifyActionDrawer({
           )}
 
           <Separator />
+
+          {/* Starter phrases */}
+          <div>
+            <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+              <Sparkles className="h-3 w-3" />
+              Start with...
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {starterPhrases.map((phrase) => (
+                <button
+                  key={phrase}
+                  type="button"
+                  onClick={() => {
+                    if (!answer.trim()) {
+                      setAnswer(phrase + " ");
+                    } else {
+                      setAnswer((prev) => prev + " " + phrase + " ");
+                    }
+                  }}
+                  className={cn(
+                    "rounded-full border px-2.5 py-1 text-xs transition-colors",
+                    "text-muted-foreground hover:text-foreground hover:border-foreground/30",
+                    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  )}
+                >
+                  {phrase}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Input area */}
           <div className="space-y-3">

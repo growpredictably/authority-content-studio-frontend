@@ -111,7 +111,7 @@ export default function AuthorityOverviewPage() {
                     <Activity className="h-4 w-4 text-primary" />
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Avg Coherence</p>
+                    <p className="text-xs text-muted-foreground">Avg Authority Strength</p>
                     <p className="text-2xl font-bold tabular-nums">{avgCoherence}%</p>
                     <p className="text-[10px] text-muted-foreground">
                       {avgCoherence >= 70 ? "Healthy" : "Needs attention"}

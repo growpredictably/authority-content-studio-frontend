@@ -307,7 +307,7 @@ function ClarifyContent({ action, heroMode }: { action: SyncAction; heroMode?: b
           <span className="tabular-nums font-medium text-foreground">
             {(action.impact_delta.after * 100).toFixed(0)}%
           </span>
-          <span>coherence</span>
+          <span>authority strength</span>
         </div>
       )}
     </div>

@@ -59,7 +59,7 @@ export function PacketDetailDialog({
             <CoherenceGauge score={packet.coherence_score} size={64} />
             <div className="text-sm">
               <p className="font-medium">
-                Coherence: {Math.round(packet.coherence_score * 100)}%
+                Authority Strength: {Math.round(packet.coherence_score * 100)}%
               </p>
               <p className="text-muted-foreground text-xs">
                 {packet.is_complete ? "Complete" : "Incomplete"} packet

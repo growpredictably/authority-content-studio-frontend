@@ -115,7 +115,7 @@ export function GapRemediateDialog({
             <div className="space-y-3">
               <div className="space-y-1">
                 <p className="text-xs text-muted-foreground">
-                  Coherence Change
+                  Authority Strength Change
                 </p>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium tabular-nums">

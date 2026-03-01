@@ -65,7 +65,7 @@ export function PotentialThemesSection({
                 </p>
 
                 <p className="text-xs text-muted-foreground">
-                  Expected coherence:{" "}
+                  Expected authority strength:{" "}
                   <span className="font-medium tabular-nums">
                     {Math.round(theme.expected_coherence * 100)}%
                   </span>

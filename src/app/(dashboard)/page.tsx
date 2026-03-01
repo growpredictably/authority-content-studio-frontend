@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { CompactScore } from "@/components/command-center/compact-score";
 import { DailySyncCards } from "@/components/command-center/daily-sync-cards";
 import { SavedItemsDrawer } from "@/components/command-center/saved-items-drawer";
+import { SavedForLater } from "@/components/command-center/saved-for-later";
 import { PostSyncState } from "@/components/command-center/post-sync-state";
 import { MilestoneCelebration } from "@/components/command-center/sync-celebration";
 import { useAuthorityScore } from "@/lib/api/hooks/use-command-center";
@@ -123,6 +124,9 @@ export default function CommandCenterPage() {
             authorId={author.id}
             onAllComplete={handleAllComplete}
           />
+
+          {/* Saved for later — shows inline when user has bookmarked items */}
+          <SavedForLater authorId={author.id} />
         </>
       ) : (
         /* State: Sync complete — earned dashboard as reward */

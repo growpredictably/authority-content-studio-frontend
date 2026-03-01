@@ -42,7 +42,7 @@ export function AuthorityOverviewStats({
       description: `${packets?.summary.complete ?? 0} complete`,
     },
     {
-      label: "Avg Coherence",
+      label: "Avg Authority Strength",
       value: `${avgCoherence}%`,
       icon: Activity,
       description: avgCoherence >= 70 ? "Healthy" : "Needs attention",
