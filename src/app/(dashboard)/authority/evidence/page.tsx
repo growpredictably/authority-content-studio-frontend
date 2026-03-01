@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Radar,
@@ -10,6 +10,7 @@ import {
   Zap,
   ShieldAlert,
   Tag,
+  ChevronDown,
 } from "lucide-react";
 import { useAuthor } from "@/hooks/use-author";
 import { AuthorSelector } from "@/components/shared/author-selector";
@@ -39,14 +40,55 @@ export default function EvidenceFeedPage() {
   const [manualTopic, setManualTopic] = useState("");
   const [scanType, setScanType] = useState<"evidence" | "counter">("evidence");
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [overflowOpen, setOverflowOpen] = useState(false);
+  const overflowRef = useRef<HTMLDivElement>(null);
+
+  const packetThemes = themes.data ?? [];
+
+  // Sort: calibrating first, then ready, then draft
+  const STAGE_ORDER: Record<string, number> = { calibrating: 0, ready: 1, draft: 2 };
+  const sortedThemes = useMemo(
+    () =>
+      [...packetThemes].sort(
+        (a, b) => (STAGE_ORDER[a.stage] ?? 3) - (STAGE_ORDER[b.stage] ?? 3)
+      ),
+    [packetThemes]
+  );
+
+  const MAX_PILLS = 5;
+
+  // If selected theme is in overflow, swap it into the visible set
+  const visibleThemes = useMemo(() => {
+    const top = sortedThemes.slice(0, MAX_PILLS);
+    const overflow = sortedThemes.slice(MAX_PILLS);
+    if (selectedTheme && overflow.some((t) => t.theme === selectedTheme)) {
+      const selectedItem = overflow.find((t) => t.theme === selectedTheme)!;
+      return [...top.slice(0, MAX_PILLS - 1), selectedItem];
+    }
+    return top;
+  }, [sortedThemes, selectedTheme]);
+
+  const overflowThemes = useMemo(
+    () => sortedThemes.filter((t) => !visibleThemes.includes(t)),
+    [sortedThemes, visibleThemes]
+  );
 
   // Auto-select first "calibrating" theme, or fall back to first theme
-  const packetThemes = themes.data ?? [];
   useEffect(() => {
-    if (selectedTheme || packetThemes.length === 0) return;
-    const calibrating = packetThemes.find((t) => t.stage === "calibrating");
-    setSelectedTheme(calibrating?.theme ?? packetThemes[0].theme);
-  }, [packetThemes, selectedTheme]);
+    if (selectedTheme || sortedThemes.length === 0) return;
+    setSelectedTheme(sortedThemes[0].theme);
+  }, [sortedThemes, selectedTheme]);
+
+  // Close overflow dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (overflowRef.current && !overflowRef.current.contains(e.target as Node)) {
+        setOverflowOpen(false);
+      }
+    }
+    if (overflowOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [overflowOpen]);
 
   // Steps 2-4: Auto-load evidence for the selected theme (cache-first)
   const themeEvidence = useThemeEvidence(author?.id, selectedTheme);
@@ -117,15 +159,15 @@ export default function EvidenceFeedPage() {
         your Brain.
       </p>
 
-      {/* ─── Theme Chips ─────────────────────────────────────── */}
-      {packetThemes.length > 0 && (
+      {/* ─── Theme Chips (max 5) + Overflow ────────────────── */}
+      {sortedThemes.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <Tag className="h-3.5 w-3.5" />
             Your Belief Themes
           </div>
-          <div className="flex flex-wrap gap-2">
-            {packetThemes.map(({ theme, stage }) => (
+          <div className="flex flex-wrap items-center gap-2">
+            {visibleThemes.map(({ theme, stage }) => (
               <button
                 key={theme}
                 onClick={() => {
@@ -149,6 +191,51 @@ export default function EvidenceFeedPage() {
                 )}
               </button>
             ))}
+
+            {overflowThemes.length > 0 && (
+              <div className="relative" ref={overflowRef}>
+                <button
+                  onClick={() => setOverflowOpen((o) => !o)}
+                  className="flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+                >
+                  +{overflowThemes.length} more
+                  <ChevronDown className={cn("h-3 w-3 transition-transform", overflowOpen && "rotate-180")} />
+                </button>
+
+                {overflowOpen && (
+                  <div className="absolute left-0 top-full z-20 mt-1 w-56 rounded-lg border bg-popover p-1 shadow-md">
+                    {overflowThemes.map(({ theme, stage }) => (
+                      <button
+                        key={theme}
+                        onClick={() => {
+                          setSelectedTheme(theme);
+                          manualScan.reset();
+                          setOverflowOpen(false);
+                        }}
+                        className={cn(
+                          "flex w-full items-center justify-between rounded-md px-3 py-1.5 text-xs transition-colors",
+                          selectedTheme === theme
+                            ? "bg-primary/10 font-medium text-primary"
+                            : "hover:bg-muted"
+                        )}
+                      >
+                        <span className="truncate">{theme}</span>
+                        {stage === "calibrating" && (
+                          <span className="ml-2 shrink-0 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] text-amber-700">
+                            calibrating
+                          </span>
+                        )}
+                        {stage === "ready" && (
+                          <span className="ml-2 shrink-0 rounded-full bg-green-100 px-1.5 py-0.5 text-[10px] text-green-700">
+                            ready
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
