@@ -65,6 +65,7 @@ export function useCreateAuthor() {
       queryClient.invalidateQueries({ queryKey: ["authors"] });
       queryClient.invalidateQueries({ queryKey: ["author"] });
       queryClient.invalidateQueries({ queryKey: ["brands"] });
+      queryClient.invalidateQueries({ queryKey: ["all-authors-dna"] });
     },
   });
 }
@@ -90,6 +91,7 @@ export function useUpdateAuthor() {
       queryClient.invalidateQueries({ queryKey: ["authors"] });
       queryClient.invalidateQueries({ queryKey: ["author"] });
       queryClient.invalidateQueries({ queryKey: ["voice-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["all-authors-dna"] });
     },
   });
 }
@@ -109,6 +111,7 @@ export function useSetPrimaryAuthor() {
       queryClient.invalidateQueries({ queryKey: ["authors"] });
       queryClient.invalidateQueries({ queryKey: ["author"] });
       queryClient.invalidateQueries({ queryKey: ["voice-profile"] });
+      queryClient.invalidateQueries({ queryKey: ["all-authors-dna"] });
     },
   });
 }
@@ -126,6 +129,7 @@ export function useDeleteAuthor() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["authors"] });
       queryClient.invalidateQueries({ queryKey: ["author"] });
+      queryClient.invalidateQueries({ queryKey: ["all-authors-dna"] });
     },
   });
 }

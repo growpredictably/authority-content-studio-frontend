@@ -1,465 +1,165 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Mic, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Mic, RefreshCw, Loader2, Check, X, Pencil } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
-import { useAuthor } from "@/hooks/use-author";
+import { useAllAuthorsWithDna } from "@/lib/api/hooks/use-voice-builder";
 import {
-  useVoiceProfile,
-  useResynthesizeVoice,
-  useUpdateDnaSection,
-} from "@/lib/api/hooks/use-voice-builder";
-import { DnaElementEditor } from "@/components/voice-builder/dna-element-editor";
-import { AuthorSelector } from "@/components/shared/author-selector";
+  useSetPrimaryAuthor,
+  useDeleteAuthor,
+} from "@/lib/api/hooks/use-authors";
+import { ProfileCard } from "@/components/voice-profiles/profile-card";
+import { DeleteAuthorDialog } from "@/components/voice-profiles/delete-author-dialog";
+import type { AuthorWithBrand } from "@/lib/voice-profiles/types";
 import { toast } from "sonner";
 
-// ─── Helpers ─────────────────────────────────────────────────
+export default function VoiceProfilesPage() {
+  const router = useRouter();
+  const { data: authors, isLoading } = useAllAuthorsWithDna();
+  const setPrimary = useSetPrimaryAuthor();
+  const deleteAuthor = useDeleteAuthor();
 
-function renderText(val: string): React.ReactNode {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  if (!urlRegex.test(val)) {
-    return <p className="text-sm leading-relaxed whitespace-pre-line">{val}</p>;
-  }
-  const parts = val.split(urlRegex);
-  return (
-    <p className="text-sm leading-relaxed whitespace-pre-line">
-      {parts.map((part, i) =>
-        /^https?:\/\//.test(part) ? (
-          <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-primary underline underline-offset-2">
-            {part}
-          </a>
-        ) : (
-          <span key={i}>{part}</span>
-        )
-      )}
-    </p>
+  const [search, setSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<AuthorWithBrand | null>(
+    null
   );
-}
 
-function renderVoiceModes(modes: Record<string, unknown>[]): React.ReactNode {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {modes.map((mode, i) => (
-        <div key={i} className="rounded-lg border p-3 space-y-1">
-          <p className="text-sm font-semibold">{String(mode.mode_name || "")}</p>
-          {mode.when_to_use ? (
-            <p className="text-xs text-muted-foreground">{String(mode.when_to_use)}</p>
-          ) : null}
-          {mode.description ? <p className="text-xs">{String(mode.description)}</p> : null}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function renderDoList(items: string[], variant: "do" | "dont"): React.ReactNode {
-  const Icon = variant === "do" ? Check : X;
-  const color = variant === "do" ? "text-green-500" : "text-red-500";
-  const labelColor = variant === "do" ? "text-green-600" : "text-red-600";
-  return (
-    <div className="space-y-1">
-      <p className={`text-xs font-bold uppercase ${labelColor}`}>
-        {variant === "do" ? "Do" : "Don't"}
-      </p>
-      {items.map((item, i) => (
-        <div key={i} className="flex items-start gap-2 text-sm">
-          <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${color}`} />
-          <span>{item}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function renderJsonSection(val: unknown): React.ReactNode {
-  if (!val) return <p className="text-sm text-muted-foreground">Not yet synthesized</p>;
-
-  if (typeof val === "string") {
-    return renderText(val);
-  }
-
-  if (Array.isArray(val)) {
-    if (val.length === 0) return <p className="text-sm text-muted-foreground">None</p>;
-
+  // Filter authors by search query
+  const query = search.toLowerCase().trim();
+  const filtered = (authors ?? []).filter((author) => {
+    if (!query) return true;
     return (
-      <div className="space-y-3">
-        {val.map((item, idx) => (
-          <div key={idx} className="rounded-lg border p-3">
-            {typeof item === "string" ? (
-              <p className="text-sm">{item}</p>
-            ) : typeof item === "object" && item !== null ? (
-              <div className="space-y-1">
-                {Object.entries(item as Record<string, unknown>).map(([k, v]) => {
-                  if (v === null || v === undefined || v === "") return null;
-                  const label = k
-                    .replace(/[_-]/g, " ")
-                    .replace(/\b\w/g, (c) => c.toUpperCase());
-                  return (
-                    <div key={k}>
-                      <span className="text-xs font-semibold text-muted-foreground">
-                        {label}:{" "}
-                      </span>
-                      <span className="text-sm">
-                        {typeof v === "object" ? JSON.stringify(v) : String(v)}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-sm">{String(item)}</p>
-            )}
-          </div>
-        ))}
-      </div>
+      author.name.toLowerCase().includes(query) ||
+      (author.brand?.name?.toLowerCase().includes(query) ?? false) ||
+      (author.archetype?.toLowerCase().includes(query) ?? false)
     );
+  }) as AuthorWithBrand[];
+
+  function handleViewDna(authorId: string) {
+    router.push(`/voice/profiles/${authorId}`);
   }
 
-  if (typeof val === "object") {
-    const obj = val as Record<string, unknown>;
-
-    // do/dont pattern (tone section)
-    if ("do" in obj || "dont" in obj) {
-      const doItems = Array.isArray(obj.do) ? (obj.do as string[]) : [];
-      const dontItems = Array.isArray(obj.dont) ? (obj.dont as string[]) : [];
-      const rest = Object.entries(obj).filter(
-        ([k, v]) => k !== "do" && k !== "dont" && v !== null && v !== undefined && v !== ""
-      );
-      return (
-        <div className="space-y-4">
-          {doItems.length > 0 && renderDoList(doItems, "do")}
-          {dontItems.length > 0 && renderDoList(dontItems, "dont")}
-          {rest.map(([k, v]) => {
-            const label = k
-              .replace(/[_-]/g, " ")
-              .replace(/\b\w/g, (c) => c.toUpperCase());
-            // voice_modes pattern
-            if (k === "voice_modes" && Array.isArray(v)) {
-              return (
-                <div key={k}>
-                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                    {label}
-                  </p>
-                  {renderVoiceModes(v as Record<string, unknown>[])}
-                </div>
-              );
-            }
-            return (
-              <div key={k}>
-                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
-                  {label}
-                </p>
-                {renderJsonSection(v)}
-              </div>
-            );
-          })}
-        </div>
-      );
-    }
-
-    // Generic object
-    const entries = Object.entries(obj).filter(
-      ([, v]) => v !== null && v !== undefined && v !== ""
-    );
-    if (entries.length === 0) return <p className="text-sm text-muted-foreground">Not yet synthesized</p>;
-
-    return (
-      <div className="space-y-2">
-        {entries.map(([k, v]) => {
-          const label = k
-            .replace(/[_-]/g, " ")
-            .replace(/\b\w/g, (c) => c.toUpperCase());
-          // voice_modes pattern in any object context
-          if (k === "voice_modes" && Array.isArray(v)) {
-            return (
-              <div key={k}>
-                <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                  {label}
-                </p>
-                {renderVoiceModes(v as Record<string, unknown>[])}
-              </div>
-            );
-          }
-          return (
-            <div key={k}>
-              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
-                {label}
-              </p>
-              {typeof v === "string" ? (
-                renderText(v)
-              ) : Array.isArray(v) ? (
-                <div className="flex flex-wrap gap-1">
-                  {v.map((item, i) => (
-                    <Badge key={i} variant="secondary" className="text-xs font-normal">
-                      {typeof item === "string" ? item : JSON.stringify(item)}
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
-                renderJsonSection(v)
-              )}
-            </div>
-          );
-        })}
-      </div>
-    );
+  function handleTrainVoice(authorId: string) {
+    router.push(`/voice?author=${authorId}`);
   }
 
-  return <p className="text-sm">{String(val)}</p>;
-}
-
-function countItems(val: unknown): number {
-  if (Array.isArray(val)) return val.length;
-  if (typeof val === "object" && val) return Object.keys(val).length;
-  return val ? 1 : 0;
-}
-
-// ─── Section Card ────────────────────────────────────────────
-
-function ProfileSection({
-  title,
-  data,
-  onEdit,
-  onResynthesize,
-  isResynthesizing,
-}: {
-  title: string;
-  data: unknown;
-  onEdit?: () => void;
-  onResynthesize?: () => void;
-  isResynthesizing?: boolean;
-}) {
-  const count = countItems(data);
-
-  return (
-    <div className="rounded-xl border bg-card p-5 space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-          {title}
-        </h3>
-        <div className="flex items-center gap-1">
-          {count > 0 && (
-            <Badge variant="secondary" className="text-xs mr-1">
-              {count} {count === 1 ? "item" : "items"}
-            </Badge>
-          )}
-          {onEdit && (
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onEdit} title="Edit">
-              <Pencil className="h-3.5 w-3.5" />
-            </Button>
-          )}
-          {onResynthesize && (
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-7 w-7"
-              onClick={onResynthesize}
-              disabled={isResynthesizing}
-              title="Re-synthesize this section"
-            >
-              {isResynthesizing ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <RefreshCw className="h-3.5 w-3.5" />
-              )}
-            </Button>
-          )}
-        </div>
-      </div>
-      {renderJsonSection(data)}
-    </div>
-  );
-}
-
-// ─── Main Page ───────────────────────────────────────────────
-
-const DNA_SECTIONS = [
-  { key: "tone", title: "Tone & Style Guide" },
-  { key: "stories", title: "Stories" },
-  { key: "perspectives", title: "Perspectives" },
-  { key: "quotes", title: "Quotes" },
-  { key: "knowledge", title: "Knowledge" },
-  { key: "experience", title: "Experience" },
-  { key: "preferences", title: "Preferences" },
-  { key: "frameworks", title: "Frameworks" },
-] as const;
-
-const ALL_BRANCHES = [
-  "stories", "tone", "perspectives", "internal_knowledge",
-  "experience", "quotes", "preferences", "external_knowledge", "frameworks",
-];
-
-// Map from DNA_SECTIONS key to synthesis branch name
-const SECTION_TO_BRANCH: Record<string, string> = {
-  tone: "tone",
-  stories: "stories",
-  perspectives: "perspectives",
-  quotes: "quotes",
-  knowledge: "internal_knowledge",
-  experience: "experience",
-  preferences: "preferences",
-  frameworks: "frameworks",
-};
-
-export default function VoiceProfilePage() {
-  const { author, isLoading: authorLoading } = useAuthor();
-  const { data: profile, isLoading: profileLoading } = useVoiceProfile(
-    author?.id
-  );
-  const resynthMutation = useResynthesizeVoice();
-  const updateSection = useUpdateDnaSection();
-
-  const [editingSection, setEditingSection] = useState<{
-    key: string;
-    title: string;
-  } | null>(null);
-  const [resynthSection, setResynthSection] = useState<string | null>(null);
-
-  const isLoading = authorLoading || profileLoading;
-
-  const profileRecord = profile as Record<string, unknown> | null;
-  const filledCount = profileRecord
-    ? DNA_SECTIONS.filter(({ key }) => countItems(profileRecord[key]) > 0).length
-    : 0;
-  const completeness = Math.round((filledCount / DNA_SECTIONS.length) * 100);
-
-  function handleResynthesize() {
-    if (!author) return;
-    resynthMutation.mutate(
-      { author_id: author.id, user_id: author.user_id },
-      {
-        onSuccess: () =>
-          toast.success("Voice re-synthesis started. This may take a minute."),
-        onError: (e) => toast.error(`Re-synthesis failed: ${e.message}`),
-      }
-    );
+  function handleSetPrimary(authorId: string) {
+    setPrimary.mutate(authorId, {
+      onSuccess: () => toast.success("Primary author updated"),
+      onError: (e) => toast.error(`Failed to set primary: ${e.message}`),
+    });
   }
 
-  function handleSectionResynthesize(sectionKey: string) {
-    if (!author) return;
-    const branchKey = SECTION_TO_BRANCH[sectionKey] || sectionKey;
-    const exclude = ALL_BRANCHES.filter((b) => b !== branchKey);
-    setResynthSection(sectionKey);
-    resynthMutation.mutate(
-      { author_id: author.id, user_id: author.user_id, exclude },
-      {
-        onSuccess: () => {
-          toast.success(`Re-synthesizing ${sectionKey}...`);
-          setResynthSection(null);
-        },
-        onError: (e) => {
-          toast.error(`Re-synthesis failed: ${e.message}`);
-          setResynthSection(null);
-        },
-      }
-    );
-  }
-
-  function handleSaveSection(data: unknown) {
-    if (!author || !editingSection) return;
-    updateSection.mutate(
-      {
-        author_id: author.id,
-        section_key: editingSection.key,
-        data,
+  function handleDeleteConfirm() {
+    if (!deleteTarget) return;
+    deleteAuthor.mutate(deleteTarget.id, {
+      onSuccess: () => {
+        toast.success(`${deleteTarget.name} deleted`);
+        setDeleteTarget(null);
       },
-      {
-        onSuccess: () => {
-          toast.success(`${editingSection.title} updated`);
-          setEditingSection(null);
-        },
-        onError: (e) =>
-          toast.error(`Save failed: ${e instanceof Error ? e.message : "Unknown error"}`),
-      }
-    );
+      onError: (e) => toast.error(`Delete failed: ${e.message}`),
+    });
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <Mic className="h-6 w-6" />
-            <h1 className="text-2xl font-bold">Voice Profile</h1>
-            <AuthorSelector />
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Your synthesized voice profile — tone, stories, perspectives, and more
-          </p>
-          {profile && (
-            <div className="mt-2 flex items-center gap-3 max-w-xs">
-              <Progress value={completeness} className="h-2" />
-              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                {completeness}% ({filledCount}/{DNA_SECTIONS.length})
-              </span>
-            </div>
-          )}
+      <div>
+        <div className="flex items-center gap-2">
+          <Mic className="h-6 w-6" />
+          <h1 className="text-2xl font-bold">Voice Profiles</h1>
         </div>
-        {author && (
+        <p className="mt-1 text-sm text-muted-foreground">
+          Overview of all voice profiles across your brands
+        </p>
+      </div>
+
+      {/* Search */}
+      <div className="relative max-w-sm">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name, brand, or archetype..."
+          className="pl-9 pr-9"
+        />
+        {search && (
           <Button
-            variant="outline"
-            size="sm"
-            onClick={handleResynthesize}
-            disabled={resynthMutation.isPending}
-            className="gap-1.5"
+            variant="ghost"
+            size="icon"
+            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+            onClick={() => setSearch("")}
           >
-            {resynthMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4" />
-            )}
-            Re-synthesize
+            <X className="h-3.5 w-3.5" />
           </Button>
         )}
       </div>
 
+      {/* Grid */}
       {isLoading ? (
-        <div className="space-y-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-32 rounded-xl" />
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-48 rounded-xl" />
           ))}
         </div>
-      ) : !profile ? (
+      ) : filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-xl border border-dashed p-12 text-center">
           <Mic className="h-10 w-10 text-muted-foreground/40 mb-3" />
-          <h3 className="font-medium">No voice profile found</h3>
-          <p className="mt-1 text-sm text-muted-foreground max-w-sm">
-            Start by adding content through Voice Builder to build your voice
-            profile.
-          </p>
+          {query ? (
+            <>
+              <h3 className="font-medium">
+                No voice profiles match your search
+              </h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2"
+                onClick={() => setSearch("")}
+              >
+                Clear Search
+              </Button>
+            </>
+          ) : (
+            <>
+              <h3 className="font-medium">No voice profiles yet</h3>
+              <p className="mt-1 text-sm text-muted-foreground max-w-sm">
+                Start by adding content through Voice Builder to build your
+                first voice profile.
+              </p>
+            </>
+          )}
         </div>
       ) : (
-        <div className="space-y-4">
-          {DNA_SECTIONS.map(({ key, title }) => (
-            <ProfileSection
-              key={key}
-              title={title}
-              data={profileRecord?.[key]}
-              onEdit={() => setEditingSection({ key, title })}
-              onResynthesize={() => handleSectionResynthesize(key)}
-              isResynthesizing={resynthSection === key}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {filtered.map((author) => (
+            <ProfileCard
+              key={author.id}
+              author={author}
+              onViewDna={handleViewDna}
+              onTrainVoice={handleTrainVoice}
+              onSetPrimary={handleSetPrimary}
+              onDelete={(id) => {
+                const target = filtered.find((a) => a.id === id);
+                if (target) setDeleteTarget(target);
+              }}
             />
           ))}
         </div>
       )}
 
-      {editingSection && profileRecord && (
-        <DnaElementEditor
-          open={!!editingSection}
-          onOpenChange={(open) => {
-            if (!open) setEditingSection(null);
-          }}
-          sectionKey={editingSection.key}
-          sectionTitle={editingSection.title}
-          data={profileRecord[editingSection.key]}
-          onSave={handleSaveSection}
-          isSaving={updateSection.isPending}
-        />
-      )}
+      {/* Delete Confirmation Dialog */}
+      <DeleteAuthorDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+        authorName={deleteTarget?.name ?? ""}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={deleteAuthor.isPending}
+      />
     </div>
   );
 }

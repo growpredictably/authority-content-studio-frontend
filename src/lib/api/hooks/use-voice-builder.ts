@@ -146,7 +146,7 @@ export function useVoiceProfile(authorId: string | undefined) {
       const { data, error } = await supabase
         .from("authors_dna")
         .select(
-          "id, name, tone, stories, perspectives, quotes, knowledge, experience, preferences, frameworks"
+          "id, name, brand_id, user_id, archetype, archetype_description, status, is_primary, updated_at, tone, stories, perspectives, quotes, knowledge, experience, preferences, frameworks"
         )
         .eq("id", authorId!)
         .single();
@@ -155,6 +155,52 @@ export function useVoiceProfile(authorId: string | undefined) {
     },
     enabled: !!authorId,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** Fetch all authors with DNA columns for the profiles grid. */
+export function useAllAuthorsWithDna() {
+  return useQuery({
+    queryKey: ["all-authors-dna"],
+    queryFn: async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      // Fetch user's brands
+      const { data: brands } = await supabase
+        .from("user_brands")
+        .select("id, name, brand_color")
+        .eq("user_id", user.id);
+
+      // Fetch all authors with DNA columns
+      const { data: authors, error } = await supabase
+        .from("authors_dna")
+        .select(
+          "id, name, brand_id, user_id, archetype, archetype_description, is_primary, status, updated_at, tone, quotes, stories, knowledge, experience, perspectives, preferences, frameworks"
+        )
+        .eq("user_id", user.id)
+        .order("is_primary", { ascending: false })
+        .order("name");
+
+      if (error) throw error;
+
+      // Merge brand info
+      const brandMap = new Map(
+        (brands || []).map((b) => [b.id, b])
+      );
+      return (authors || []).map((a) => ({
+        ...a,
+        brand: brandMap.get(a.brand_id) || {
+          id: a.brand_id,
+          name: "Unknown",
+          brand_color: null,
+        },
+      }));
+    },
+    staleTime: 2 * 60_000,
   });
 }
 
