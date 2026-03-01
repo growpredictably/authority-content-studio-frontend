@@ -37,6 +37,7 @@ interface SyncCardProps {
   heroMode?: boolean;
   onCompleted: (message?: string, habitStats?: HabitStats) => void;
   onSkipped?: () => void;
+  onSaved?: () => void;
 }
 
 export function SyncCard({
@@ -46,6 +47,7 @@ export function SyncCard({
   heroMode,
   onCompleted,
   onSkipped,
+  onSaved,
 }: SyncCardProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -58,7 +60,10 @@ export function SyncCard({
     saveAction.mutate(
       { author_id: authorId, action_payload: action },
       {
-        onSuccess: () => toast.success("Saved for later"),
+        onSuccess: () => {
+          toast.success("Saved for later");
+          onSaved?.();
+        },
         onError: () => toast.error("Failed to save"),
       }
     );

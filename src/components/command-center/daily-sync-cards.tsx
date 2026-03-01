@@ -33,6 +33,7 @@ interface DailySyncCardsProps {
 export function DailySyncCards({ authorId, onAllComplete }: DailySyncCardsProps) {
   const { data, isLoading, error } = useDailySync(authorId);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [currentIndex, setCurrentIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>("action");
   const [lastCompleted, setLastCompleted] = useState<CompletedActionInfo | null>(null);
@@ -61,10 +62,11 @@ export function DailySyncCards({ authorId, onAllComplete }: DailySyncCardsProps)
 
   const handleMicroCelebrationDone = useCallback(() => {
     if (!data) return;
-    const totalActions = data.actions.length;
-    const newCompletedCount = completedIds.size; // already incremented
+    const remainingActions = data.actions.filter(
+      (a) => !completedIds.has(a.action_id) && !savedIds.has(a.action_id)
+    );
 
-    if (newCompletedCount >= totalActions) {
+    if (remainingActions.length === 0) {
       // All done — macro celebration
       setPhase("macro-celebrate");
     } else {
@@ -72,7 +74,7 @@ export function DailySyncCards({ authorId, onAllComplete }: DailySyncCardsProps)
       setCurrentIndex((prev) => prev + 1);
       setPhase("action");
     }
-  }, [data, completedIds.size]);
+  }, [data, completedIds, savedIds]);
 
   const handleMacroCelebrationDone = useCallback(() => {
     setPhase("complete");
@@ -81,19 +83,44 @@ export function DailySyncCards({ authorId, onAllComplete }: DailySyncCardsProps)
     }
   }, [lastCompleted, onAllComplete]);
 
+  const handleActionSaved = useCallback(
+    (action: SyncAction) => {
+      setSavedIds((prev) => new Set(prev).add(action.action_id));
+      if (!data) return;
+      // Check if all remaining (non-saved) actions are also completed
+      const remainingAfterSave = data.actions.filter(
+        (a) =>
+          a.action_id !== action.action_id &&
+          !completedIds.has(a.action_id) &&
+          !savedIds.has(a.action_id)
+      );
+      if (remainingAfterSave.length === 0 && completedIds.size > 0) {
+        // Everything is either completed or saved, and at least one was completed
+        setPhase("macro-celebrate");
+      }
+    },
+    [data, completedIds, savedIds]
+  );
+
   const handleActionSkipped = useCallback(
     (action: SyncAction) => {
       // Skips don't get celebrated, just move forward
       setCompletedIds((prev) => new Set(prev).add(action.action_id));
       if (!data) return;
-      if (completedIds.size + 1 >= data.actions.length) {
+      const remainingAfterSkip = data.actions.filter(
+        (a) =>
+          a.action_id !== action.action_id &&
+          !completedIds.has(a.action_id) &&
+          !savedIds.has(a.action_id)
+      );
+      if (remainingAfterSkip.length === 0) {
         // If last action was skipped, still show macro
         setPhase("macro-celebrate");
       } else {
         setCurrentIndex((prev) => prev + 1);
       }
     },
-    [data, completedIds.size]
+    [data, completedIds, savedIds]
   );
 
   if (isLoading) {
@@ -126,7 +153,7 @@ export function DailySyncCards({ authorId, onAllComplete }: DailySyncCardsProps)
   }
 
   const activeActions = data.actions.filter(
-    (a) => !completedIds.has(a.action_id)
+    (a) => !completedIds.has(a.action_id) && !savedIds.has(a.action_id)
   );
 
   // If no actions available at all (no DNA yet)
@@ -153,7 +180,7 @@ export function DailySyncCards({ authorId, onAllComplete }: DailySyncCardsProps)
   }
 
   const currentAction = activeActions[0];
-  const totalCount = data.actions.length;
+  const remainingTotal = data.actions.length - savedIds.size;
   const completedCount = completedIds.size;
   const isAtRisk = data.habit_stats.streak_status === "at_risk";
 
@@ -210,6 +237,7 @@ export function DailySyncCards({ authorId, onAllComplete }: DailySyncCardsProps)
                   handleActionCompleted(currentAction, message, habitStats)
                 }
                 onSkipped={() => handleActionSkipped(currentAction)}
+                onSaved={() => handleActionSaved(currentAction)}
               />
             </motion.div>
           )}
@@ -239,7 +267,7 @@ export function DailySyncCards({ authorId, onAllComplete }: DailySyncCardsProps)
       {/* Progress dots */}
       {phase !== "complete" && (
         <div className="flex items-center justify-center gap-2">
-          {Array.from({ length: totalCount }).map((_, i) => (
+          {Array.from({ length: remainingTotal }).map((_, i) => (
             <motion.div
               key={i}
               className={cn(
@@ -259,7 +287,7 @@ export function DailySyncCards({ authorId, onAllComplete }: DailySyncCardsProps)
             />
           ))}
           <span className="text-xs text-muted-foreground ml-2">
-            {completedCount} of {totalCount}
+            {completedCount} of {remainingTotal}
           </span>
         </div>
       )}
