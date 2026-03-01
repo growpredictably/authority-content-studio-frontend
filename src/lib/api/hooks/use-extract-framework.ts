@@ -48,7 +48,7 @@ export function useEnrichFramework() {
   return useMutation({
     mutationFn: async (payload: {
       frameworkId: string;
-      transcriptionId: number;
+      transcriptionIds: number[];
       authorId: string;
       useBatch?: boolean;
       fieldsToEnhance?: string[];
@@ -57,7 +57,7 @@ export function useEnrichFramework() {
       return apiCall<BrandFramework | BatchJobResponse>(
         `/v1/frameworks/${payload.frameworkId}/enrich-from-transcript`,
         {
-          transcription_id: payload.transcriptionId,
+          transcription_ids: payload.transcriptionIds.map(String),
           author_id: payload.authorId,
           use_batch: payload.useBatch ?? false,
           fields_to_enhance: payload.fieldsToEnhance ?? null,

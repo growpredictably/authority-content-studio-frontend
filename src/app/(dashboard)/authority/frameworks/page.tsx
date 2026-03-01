@@ -17,12 +17,18 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandInput,
+  CommandList,
+  CommandItem,
+  CommandEmpty,
+  CommandGroup,
+} from "@/components/ui/command";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Layers,
@@ -45,6 +51,8 @@ import {
   AlertTriangle,
   Sparkles,
   Headphones,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { useAuthor } from "@/hooks/use-author";
 import { AuthorSelector } from "@/components/shared/author-selector";
@@ -618,7 +626,8 @@ function FrameworkFormDialog({
   const updateMutation = useUpdateFramework();
 
   // AI generation / enrichment
-  const [aiTranscriptId, setAiTranscriptId] = useState("");
+  const [selectedTranscriptIds, setSelectedTranscriptIds] = useState<number[]>([]);
+  const [transcriptSearchOpen, setTranscriptSearchOpen] = useState(false);
   const [aiBatch, setAiBatch] = useState(false);
   const [fieldsToEnhance, setFieldsToEnhance] = useState<Set<string>>(
     new Set(ENRICHABLE_FIELD_OPTIONS.map(f => f.key))
@@ -639,6 +648,28 @@ function FrameworkFormDialog({
   const toggleAllFields = () => {
     if (allFieldsSelected) setFieldsToEnhance(new Set());
     else setFieldsToEnhance(new Set(ENRICHABLE_FIELD_OPTIONS.map(f => f.key)));
+  };
+
+  const toggleTranscript = (id: number) => {
+    if (isEdit) {
+      setSelectedTranscriptIds((prev) => {
+        if (prev.includes(id)) return prev.filter((x) => x !== id);
+        if (prev.length >= 5) {
+          toast.error("Maximum 5 transcripts per enrichment");
+          return prev;
+        }
+        const next = [...prev, id];
+        if (next.length > 1) setAiBatch(false);
+        return next;
+      });
+    } else {
+      setSelectedTranscriptIds([id]);
+      setTranscriptSearchOpen(false);
+    }
+  };
+
+  const removeTranscript = (id: number) => {
+    setSelectedTranscriptIds((prev) => prev.filter((x) => x !== id));
   };
 
   const aiPending = extractFramework.isPending || enrichFramework.isPending;
@@ -675,17 +706,17 @@ function FrameworkFormDialog({
   };
 
   const handleAiGenerate = () => {
-    if (!aiTranscriptId) { toast.error("Select a transcript first"); return; }
+    if (selectedTranscriptIds.length === 0) { toast.error("Select a transcript first"); return; }
     extractFramework.mutate(
       {
-        transcriptionId: Number(aiTranscriptId),
+        transcriptionId: selectedTranscriptIds[0],
         authorId,
         frameworkName: form.name.trim() || undefined,
         useBatch: aiBatch,
       },
       {
         onSuccess: (result) => {
-          setAiTranscriptId("");
+          setSelectedTranscriptIds([]);
           onOpenChange(false);
           if ("batch" in result && result.batch) {
             toast.info("Framework generation submitted. Results will be ready within 24 hours.");
@@ -699,28 +730,35 @@ function FrameworkFormDialog({
   };
 
   const handleAiEnrich = () => {
-    if (!aiTranscriptId || !framework) { toast.error("Select a transcript first"); return; }
+    if (selectedTranscriptIds.length === 0 || !framework) { toast.error("Select at least one transcript"); return; }
     if (fieldsToEnhance.size === 0) { toast.error("Select at least one field to enhance"); return; }
-
-    // Send null when all fields selected (backwards compat, no unnecessary prompt padding)
     const selectedFields = allFieldsSelected ? undefined : Array.from(fieldsToEnhance);
+    const count = selectedTranscriptIds.length;
+
+    if (count > 1) {
+      toast.info(`Synthesizing and enriching from ${count} transcripts... This may take a minute.`);
+    }
 
     enrichFramework.mutate(
       {
         frameworkId: framework.id,
-        transcriptionId: Number(aiTranscriptId),
+        transcriptionIds: selectedTranscriptIds,
         authorId,
         useBatch: aiBatch,
         fieldsToEnhance: selectedFields,
       },
       {
         onSuccess: (result) => {
-          setAiTranscriptId("");
+          setSelectedTranscriptIds([]);
           onOpenChange(false);
           if ("batch" in result && result.batch) {
             toast.info("Framework enrichment submitted. Results will be ready within 24 hours.");
           } else {
-            toast.success("Framework enriched with new insights!");
+            toast.success(
+              count > 1
+                ? `Framework enriched from ${count} transcripts!`
+                : "Framework enriched with new insights!"
+            );
           }
         },
         onError: (e) => toast.error(`Enrichment failed: ${e.message}`),
@@ -744,44 +782,97 @@ function FrameworkFormDialog({
                   <Sparkles className="h-4 w-4 text-primary" />
                   {isEdit ? "Enrich from Transcript" : "Generate from Transcript"}
                 </div>
-                <div>
-                  <Label htmlFor="ai-transcript" className="text-xs text-muted-foreground">
-                    Select a Fireflies transcript
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">
+                    {isEdit ? "Select Fireflies transcript(s)" : "Select a Fireflies transcript"}
                   </Label>
-                  <Select
-                    value={aiTranscriptId}
-                    onValueChange={setAiTranscriptId}
-                    disabled={aiPending}
-                  >
-                    <SelectTrigger id="ai-transcript">
-                      <SelectValue placeholder="Choose a transcript..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {transcripts.map((tx) => (
-                        <SelectItem key={tx.id} value={String(tx.id)}>
-                          <span className="flex items-center gap-2">
-                            <Headphones className="h-3 w-3 shrink-0 text-muted-foreground" />
-                            <span className="truncate">{tx.title}</span>
-                            {tx.meeting_date && (
-                              <span className="text-[10px] text-muted-foreground shrink-0">
-                                {new Date(tx.meeting_date).toLocaleDateString()}
-                              </span>
-                            )}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={transcriptSearchOpen} onOpenChange={setTranscriptSearchOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={transcriptSearchOpen}
+                        className="w-full justify-between font-normal"
+                        disabled={aiPending}
+                      >
+                        {selectedTranscriptIds.length === 0
+                          ? (isEdit ? "Choose transcript(s)..." : "Choose a transcript...")
+                          : selectedTranscriptIds.length === 1
+                            ? (transcripts?.find((t) => t.id === selectedTranscriptIds[0])?.title ?? "1 selected")
+                            : `${selectedTranscriptIds.length} transcript(s) selected`}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search transcripts..." />
+                        <CommandList>
+                          <CommandEmpty>No transcripts found.</CommandEmpty>
+                          <CommandGroup>
+                            {transcripts?.map((tx) => (
+                              <CommandItem
+                                key={tx.id}
+                                value={`${tx.title} ${tx.meeting_date || ""}`}
+                                onSelect={() => toggleTranscript(tx.id)}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4 shrink-0", selectedTranscriptIds.includes(tx.id) ? "opacity-100" : "opacity-0")} />
+                                <Headphones className="h-3 w-3 shrink-0 text-muted-foreground mr-2" />
+                                <span className="truncate flex-1">{tx.title}</span>
+                                {tx.meeting_date && (
+                                  <span className="text-[10px] text-muted-foreground shrink-0 ml-2">
+                                    {new Date(tx.meeting_date).toLocaleDateString()}
+                                  </span>
+                                )}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {/* Selected transcript badges (enrich mode) */}
+                  {isEdit && selectedTranscriptIds.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedTranscriptIds.map((id, idx) => {
+                        const tx = transcripts?.find((t) => t.id === id);
+                        return (
+                          <Badge key={id} variant="secondary" className="text-xs gap-1 pr-1">
+                            <span className="text-[10px] text-muted-foreground font-mono mr-0.5">{idx + 1}.</span>
+                            <span className="truncate max-w-[150px]">{tx?.title ?? `#${id}`}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeTranscript(id)}
+                              className="ml-0.5 rounded-sm hover:bg-muted p-0.5"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        );
+                      })}
+                      {selectedTranscriptIds.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedTranscriptIds([])}
+                          className="text-[10px] text-primary hover:underline self-center ml-1"
+                        >
+                          Clear all
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <Checkbox
                     id="ai-batch"
                     checked={aiBatch}
                     onCheckedChange={(v) => setAiBatch(v === true)}
-                    disabled={aiPending}
+                    disabled={aiPending || selectedTranscriptIds.length > 1}
                   />
                   <Label htmlFor="ai-batch" className="text-xs font-normal cursor-pointer text-muted-foreground">
                     Use batch processing (50% cheaper, ~24 hours)
+                    {selectedTranscriptIds.length > 1 && (
+                      <span className="text-[10px] text-muted-foreground/60 ml-1">(single transcript only)</span>
+                    )}
                   </Label>
                 </div>
                 {isEdit && (
@@ -822,12 +913,16 @@ function FrameworkFormDialog({
                   variant="outline"
                   size="sm"
                   onClick={isEdit ? handleAiEnrich : handleAiGenerate}
-                  disabled={!aiTranscriptId || aiPending}
+                  disabled={selectedTranscriptIds.length === 0 || aiPending}
                   className="w-full"
                 >
                   {aiPending && <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />}
                   <Sparkles className="h-4 w-4 mr-1.5" />
-                  {isEdit ? "Enrich with AI" : "Generate with AI"}
+                  {isEdit
+                    ? (selectedTranscriptIds.length > 1
+                        ? `Enrich from ${selectedTranscriptIds.length} Transcripts`
+                        : "Enrich with AI")
+                    : "Generate with AI"}
                 </Button>
               </div>
 
