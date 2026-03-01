@@ -39,6 +39,79 @@ export interface BackendError {
   details?: string;
 }
 
+// ─── Brand Types ─────────────────────────────────────────────────
+
+export interface Brand {
+  id: string;
+  user_id: string;
+  parent_brand_id: string | null;
+  name: string;
+  brand_type: "company" | "individual";
+  description: string | null;
+  is_default: boolean;
+  logo_url: string | null;
+  tagline: string | null;
+  website_url: string | null;
+  brand_color: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BrandWithChildren extends Brand {
+  children: Brand[];
+}
+
+export interface BrandsListResponse {
+  brands: Brand[];
+  hierarchy: BrandWithChildren[];
+  standalone: Brand[];
+}
+
+export interface BrandCreateRequest {
+  name: string;
+  brand_type: "company" | "individual";
+  parent_brand_id?: string | null;
+  tagline?: string | null;
+  description?: string | null;
+  website_url?: string | null;
+  is_default?: boolean;
+  logo_url?: string | null;
+  brand_color?: string | null;
+}
+
+export interface BrandUpdateRequest {
+  name?: string;
+  tagline?: string | null;
+  description?: string | null;
+  website_url?: string | null;
+  is_default?: boolean;
+  logo_url?: string | null;
+  brand_color?: string | null;
+}
+
+export interface OnboardingSetupRequest {
+  company_name: string;
+  company_tagline?: string;
+  company_description?: string;
+  company_website_url?: string;
+  voice_name: string;
+  voice_role?: string;
+  voice_description?: string;
+  icp_name?: string;
+  icp_demographics?: string;
+  icp_frustrations?: string;
+  icp_aspirations?: string;
+}
+
+export interface OnboardingSetupResponse {
+  success: boolean;
+  company_brand: Brand;
+  individual_brand: Brand;
+  author: Author;
+  icp?: unknown;
+  message: string;
+}
+
 // ─── Optimizer Types ─────────────────────────────────────────────
 
 export interface LinkedInExperience {
@@ -957,6 +1030,27 @@ export interface LinkedInPostTemplate {
 
 export interface TemplatesListResponse {
   templates: LinkedInPostTemplate[];
+  total: number;
+}
+
+// ─── User Templates ─────────────────────────────────────────
+
+export interface UserTemplate {
+  id: string;
+  user_id: string;
+  brand_id: string | null;
+  name: string;
+  description: string | null;
+  template_content: string;
+  category: string;
+  is_favorite: boolean;
+  source_template_id: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserTemplatesListResponse {
+  templates: UserTemplate[];
   total: number;
 }
 

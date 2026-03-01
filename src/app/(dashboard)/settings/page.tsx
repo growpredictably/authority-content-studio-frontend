@@ -35,11 +35,17 @@ import {
   AlertCircle,
   Globe,
   Linkedin,
+  Building2,
+  Pencil,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { useAuthor } from "@/hooks/use-author";
 import { AuthorSelector } from "@/components/shared/author-selector";
+import { useBrands } from "@/lib/api/hooks/use-brands";
+import { AddBrandModal } from "@/components/brands/add-brand-modal";
+import { EditBrandDialog } from "@/components/brands/edit-brand-dialog";
+import type { Brand } from "@/lib/api/types";
 import {
   useModelPreferences,
   useAvailableModels,
@@ -86,6 +92,10 @@ export default function SettingsPage() {
   const [timezone, setTimezone] = useState("America/New_York");
   const [linkedinUrl, setLinkedinUrl] = useState("");
   const [profileSaved, setProfileSaved] = useState(false);
+
+  // Brand management
+  const { data: brandsData, isLoading: brandsLoading } = useBrands();
+  const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
 
   // LinkedIn sync settings
   const { data: syncSettings, isLoading: syncLoading } = useLinkedInSyncSettings();
@@ -216,6 +226,88 @@ export default function SettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Brand Management */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              <CardTitle className="text-sm">Brand Management</CardTitle>
+            </div>
+            <AddBrandModal />
+          </div>
+          <CardDescription>Manage your company and individual brands.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {brandsLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-12 w-full" />
+            </div>
+          ) : brandsData?.hierarchy?.length ? (
+            <div className="space-y-3">
+              {brandsData.hierarchy.map((company) => (
+                <div key={company.id} className="space-y-2">
+                  <div className="flex items-center justify-between rounded-md border p-3">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-3 w-3 rounded-full"
+                        style={{ backgroundColor: company.brand_color ?? "#6366f1" }}
+                      />
+                      <span className="text-sm font-medium">{company.name}</span>
+                      <Badge variant="secondary" className="text-[10px]">Company</Badge>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => setEditingBrand(company)}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  {company.children?.map((child) => (
+                    <div
+                      key={child.id}
+                      className="ml-6 flex items-center justify-between rounded-md border border-dashed p-3"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="h-3 w-3 rounded-full"
+                          style={{ backgroundColor: child.brand_color ?? "#a78bfa" }}
+                        />
+                        <span className="text-sm">{child.name}</span>
+                        <Badge variant="outline" className="text-[10px]">Individual</Badge>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={() => setEditingBrand(child)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No brands found. Create one to get started.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {editingBrand && (
+        <EditBrandDialog
+          brand={editingBrand}
+          open={!!editingBrand}
+          onOpenChange={(v) => { if (!v) setEditingBrand(null); }}
+        />
+      )}
 
       {/* Account Settings */}
       <Card>

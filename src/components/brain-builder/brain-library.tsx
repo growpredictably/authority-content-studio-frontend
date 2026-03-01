@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Brain, Loader2 } from "lucide-react";
+import { Search, Brain, Loader2, BookOpen, FileText, Video, GraduationCap, Mic, Package } from "lucide-react";
 import { KnowledgeCard } from "./knowledge-card";
 import { useBrainLibrary, useBrainSearch } from "@/lib/api/hooks/use-brain-builder";
 import type { ExternalKnowledge } from "@/lib/api/types";
@@ -15,6 +15,7 @@ interface BrainLibraryProps {
 }
 
 type EndorsementFilter = "" | "full" | "partial" | "anti_model" | "reference";
+type SourceTypeFilter = "" | "article" | "book" | "video" | "paper" | "podcast" | "other";
 
 const filterButtons: { key: EndorsementFilter; label: string }[] = [
   { key: "", label: "All" },
@@ -24,8 +25,18 @@ const filterButtons: { key: EndorsementFilter; label: string }[] = [
   { key: "reference", label: "Reference" },
 ];
 
+const sourceFilterButtons: { key: SourceTypeFilter; label: string; icon: React.ElementType }[] = [
+  { key: "", label: "All Sources", icon: Package },
+  { key: "article", label: "Article", icon: FileText },
+  { key: "book", label: "Book", icon: BookOpen },
+  { key: "video", label: "Video", icon: Video },
+  { key: "paper", label: "Paper", icon: GraduationCap },
+  { key: "podcast", label: "Podcast", icon: Mic },
+];
+
 export function BrainLibrary({ authorId }: BrainLibraryProps) {
   const [filter, setFilter] = useState<EndorsementFilter>("");
+  const [sourceFilter, setSourceFilter] = useState<SourceTypeFilter>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<ExternalKnowledge[] | null>(
     null
@@ -56,7 +67,10 @@ export function BrainLibrary({ authorId }: BrainLibraryProps) {
     setSearchResults(null);
   }
 
-  const items = searchResults ?? data?.items ?? [];
+  const rawItems = searchResults ?? data?.items ?? [];
+  const items = sourceFilter
+    ? rawItems.filter((item) => item.source_type === sourceFilter)
+    : rawItems;
 
   return (
     <div className="space-y-4">
@@ -118,18 +132,37 @@ export function BrainLibrary({ authorId }: BrainLibraryProps) {
       )}
 
       {!searchResults && (
-        <div className="flex gap-1.5 flex-wrap">
-          {filterButtons.map((f) => (
-            <Button
-              key={f.key}
-              variant={filter === f.key ? "default" : "outline"}
-              size="sm"
-              className="text-xs h-7"
-              onClick={() => setFilter(f.key)}
-            >
-              {f.label}
-            </Button>
-          ))}
+        <div className="space-y-2">
+          <div className="flex gap-1.5 flex-wrap">
+            {filterButtons.map((f) => (
+              <Button
+                key={f.key}
+                variant={filter === f.key ? "default" : "outline"}
+                size="sm"
+                className="text-xs h-7"
+                onClick={() => setFilter(f.key)}
+              >
+                {f.label}
+              </Button>
+            ))}
+          </div>
+          <div className="flex gap-1.5 flex-wrap">
+            {sourceFilterButtons.map((f) => {
+              const Icon = f.icon;
+              return (
+                <Button
+                  key={f.key}
+                  variant={sourceFilter === f.key ? "default" : "outline"}
+                  size="sm"
+                  className="text-xs h-7"
+                  onClick={() => setSourceFilter(f.key)}
+                >
+                  <Icon className="h-3 w-3 mr-1" />
+                  {f.label}
+                </Button>
+              );
+            })}
+          </div>
         </div>
       )}
 

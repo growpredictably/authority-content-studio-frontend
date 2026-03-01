@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,15 +53,33 @@ import {
   useCreateFramework,
   useUpdateFramework,
   useDeleteFramework,
+  useReorderFrameworks,
 } from "@/lib/api/hooks/use-frameworks";
 import {
   useExtractFramework,
   useEnrichFramework,
 } from "@/lib/api/hooks/use-extract-framework";
 import { useTranscriptionList } from "@/lib/api/hooks/use-transcriptions";
+import { FrameworkLibraryDrawer } from "@/components/brands/framework-library-drawer";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { BrandFramework, FrameworkComponent } from "@/lib/api/types";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  rectSortingStrategy,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 // ─── Utility ────────────────────────────────────────────────────
 
@@ -153,6 +171,46 @@ function FrameworkCard({
           {filled}/{total}
         </span>
       </div>
+    </div>
+  );
+}
+
+// ─── Sortable Wrapper ───────────────────────────────────────────
+
+function SortableFrameworkCard({
+  fw,
+  isSelected,
+  onClick,
+  onEdit,
+}: {
+  fw: BrandFramework;
+  isSelected: boolean;
+  onClick: () => void;
+  onEdit: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: fw.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      <FrameworkCard
+        fw={fw}
+        isSelected={isSelected}
+        onClick={onClick}
+        onEdit={onEdit}
+      />
     </div>
   );
 }
@@ -785,15 +843,51 @@ function DeleteFrameworkDialog({ open, onOpenChange, framework }: { open: boolea
 export default function FrameworksPage() {
   const { author, isLoading: authorLoading } = useAuthor();
   const { data, isLoading: fwLoading } = useFrameworks(author?.id);
+  const reorderMutation = useReorderFrameworks();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editFW, setEditFW] = useState<BrandFramework | undefined>();
   const [deleteFW, setDeleteFW] = useState<BrandFramework | undefined>();
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [localOrder, setLocalOrder] = useState<BrandFramework[] | null>(null);
 
   const isLoading = authorLoading || fwLoading;
-  const frameworks = data?.frameworks || [];
+  const frameworks = localOrder ?? data?.frameworks ?? [];
   const activeFW = frameworks.find((f) => f.id === selectedId) || null;
+
+  // Reset local order when server data changes
+  const serverFrameworks = data?.frameworks;
+  const prevRef = useState<typeof serverFrameworks>(undefined);
+  if (serverFrameworks !== prevRef[0]) {
+    prevRef[0] = serverFrameworks;
+    if (localOrder) setLocalOrder(null);
+  }
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor)
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id || !author) return;
+
+      const oldIdx = frameworks.findIndex((f) => f.id === active.id);
+      const newIdx = frameworks.findIndex((f) => f.id === over.id);
+      if (oldIdx === -1 || newIdx === -1) return;
+
+      const reordered = arrayMove(frameworks, oldIdx, newIdx);
+      setLocalOrder(reordered);
+
+      reorderMutation.mutate(
+        { authorId: author.id, orderedIds: reordered.map((f) => f.id) },
+        { onError: () => { setLocalOrder(null); toast.error("Failed to save order"); } }
+      );
+    },
+    [frameworks, author, reorderMutation]
+  );
 
   return (
     <div className="space-y-6">
@@ -809,10 +903,16 @@ export default function FrameworksPage() {
           </p>
         </div>
         {author && (
-          <Button onClick={() => setCreateOpen(true)} size="sm">
-            <Plus className="h-4 w-4 mr-1.5" />
-            New Framework
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setLibraryOpen(true)} variant="outline" size="sm">
+              <BookOpen className="h-4 w-4 mr-1.5" />
+              Import from Library
+            </Button>
+            <Button onClick={() => setCreateOpen(true)} size="sm">
+              <Plus className="h-4 w-4 mr-1.5" />
+              New Framework
+            </Button>
+          </div>
         )}
       </div>
 
@@ -838,17 +938,28 @@ export default function FrameworksPage() {
         </div>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {frameworks.map((fw) => (
-              <FrameworkCard
-                key={fw.id}
-                fw={fw}
-                isSelected={selectedId === fw.id}
-                onClick={() => setSelectedId(selectedId === fw.id ? null : fw.id)}
-                onEdit={() => setEditFW(fw)}
-              />
-            ))}
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={frameworks.map((f) => f.id)}
+              strategy={rectSortingStrategy}
+            >
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {frameworks.map((fw) => (
+                  <SortableFrameworkCard
+                    key={fw.id}
+                    fw={fw}
+                    isSelected={selectedId === fw.id}
+                    onClick={() => setSelectedId(selectedId === fw.id ? null : fw.id)}
+                    onEdit={() => setEditFW(fw)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
 
           {activeFW && (
             <FrameworkDetail
@@ -867,6 +978,13 @@ export default function FrameworksPage() {
       )}
       {deleteFW && (
         <DeleteFrameworkDialog open={!!deleteFW} onOpenChange={(v) => !v && setDeleteFW(undefined)} framework={deleteFW} />
+      )}
+      {author && (
+        <FrameworkLibraryDrawer
+          open={libraryOpen}
+          onOpenChange={setLibraryOpen}
+          authorId={author.id}
+        />
       )}
     </div>
   );

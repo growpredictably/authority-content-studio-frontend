@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { Brain } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthor } from "@/hooks/use-author";
@@ -10,9 +12,11 @@ import {
   useCurateUrl,
   useCommitKnowledge,
 } from "@/lib/api/hooks/use-brain-builder";
+import { useInbox } from "@/lib/api/hooks/use-inbox";
 import { UrlCurateForm } from "@/components/brain-builder/url-curate-form";
 import { SkbCandidates } from "@/components/brain-builder/skb-candidates";
 import { BrainLibrary } from "@/components/brain-builder/brain-library";
+import { InboxReviewSection } from "@/components/brain-builder/inbox-review-section";
 import type {
   BrainCurateResponse,
   BrainCommitItem,
@@ -22,9 +26,12 @@ export default function BrainBuilderPage() {
   const { author } = useAuthor();
   const curateUrl = useCurateUrl();
   const commitKnowledge = useCommitKnowledge();
+  const { data: inboxData } = useInbox(author?.id);
 
   const [curateResult, setCurateResult] =
     useState<BrainCurateResponse | null>(null);
+
+  const pendingCount = inboxData?.by_status?.Draft ?? 0;
 
   function handleCurate(url: string) {
     if (!author) return;
@@ -80,26 +87,49 @@ export default function BrainBuilderPage() {
         <AuthorSelector />
       </div>
 
-      <UrlCurateForm
-        onCurate={handleCurate}
-        isCurating={curateUrl.isPending}
-      />
+      <Tabs defaultValue="library">
+        <TabsList>
+          <TabsTrigger value="library">Library</TabsTrigger>
+          <TabsTrigger value="inbox" className="gap-1.5">
+            Inbox
+            {pendingCount > 0 && (
+              <Badge variant="secondary" className="text-[10px] h-4 min-w-4 px-1">
+                {pendingCount}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
 
-      {curateResult && curateResult.candidates.length > 0 && (
-        <>
-          <Separator />
-          <SkbCandidates
-            candidates={curateResult.candidates}
-            sourceMetadata={curateResult.source_metadata}
-            onCommit={handleCommit}
-            isCommitting={commitKnowledge.isPending}
+        <TabsContent value="library" className="mt-4 space-y-6">
+          <UrlCurateForm
+            onCurate={handleCurate}
+            isCurating={curateUrl.isPending}
           />
-        </>
-      )}
 
-      <Separator />
+          {curateResult && curateResult.candidates.length > 0 && (
+            <>
+              <Separator />
+              <SkbCandidates
+                candidates={curateResult.candidates}
+                sourceMetadata={curateResult.source_metadata}
+                onCommit={handleCommit}
+                isCommitting={commitKnowledge.isPending}
+              />
+            </>
+          )}
 
-      <BrainLibrary authorId={author?.id} />
+          <Separator />
+
+          <BrainLibrary authorId={author?.id} />
+        </TabsContent>
+
+        <TabsContent value="inbox" className="mt-4">
+          <InboxReviewSection
+            authorId={author?.id}
+            userId={author?.user_id}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

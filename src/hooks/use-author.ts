@@ -51,5 +51,10 @@ export function useAuthor() {
     retry: 1,
   });
 
-  return { author: author ?? null, isLoading, error: error?.message ?? null };
+  return {
+    author: author ?? null,
+    isLoading,
+    error: error?.message ?? null,
+    hasNoAuthors: !isLoading && !author,
+  };
 }

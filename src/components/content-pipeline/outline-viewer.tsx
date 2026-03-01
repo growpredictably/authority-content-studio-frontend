@@ -25,7 +25,10 @@ import {
   X,
   LayoutTemplate,
   Check,
+  BookOpen,
 } from "lucide-react";
+import { TemplateGalleryDrawer } from "@/components/shared/template-gallery-drawer";
+import { useAuthor } from "@/hooks/use-author";
 import type {
   OutlineHook,
   OutlineSection,
@@ -40,7 +43,9 @@ interface OutlineViewerProps {
 
 export function OutlineViewer({ onWrite, isWriting }: OutlineViewerProps) {
   const { state, selectHook, setEditedOutline, selectTemplate } = usePipeline();
+  const { author } = useAuthor();
   const [evidenceOpen, setEvidenceOpen] = useState(false);
+  const [templateDrawerOpen, setTemplateDrawerOpen] = useState(false);
 
   if (!state.outline) return null;
 
@@ -362,7 +367,29 @@ export function OutlineViewer({ onWrite, isWriting }: OutlineViewerProps) {
               );
             })}
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setTemplateDrawerOpen(true)}
+          >
+            <BookOpen className="h-3.5 w-3.5" />
+            Browse All Templates
+          </Button>
         </div>
+      )}
+
+      {/* Browse templates fallback (when no recommendations) */}
+      {(!outline.recommendations || outline.recommendations.length === 0) && isPost && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={() => setTemplateDrawerOpen(true)}
+        >
+          <BookOpen className="h-3.5 w-3.5" />
+          Browse Templates
+        </Button>
       )}
 
       {/* Supporting evidence */}
@@ -465,6 +492,22 @@ export function OutlineViewer({ onWrite, isWriting }: OutlineViewerProps) {
             ? "Write Post"
             : "Write Article"}
       </Button>
+
+      {/* Template gallery drawer */}
+      <TemplateGalleryDrawer
+        open={templateDrawerOpen}
+        onOpenChange={setTemplateDrawerOpen}
+        authorId={author?.id}
+        selectedTemplateName={state.selectedTemplate?.template_name}
+        onSelect={(t) => {
+          selectTemplate({
+            template_name: t.template_name,
+            template_content: t.template_content,
+            rationale: t.rationale ?? "Selected from template gallery",
+          } as TemplateRecommendation);
+          setTemplateDrawerOpen(false);
+        }}
+      />
     </div>
   );
 }

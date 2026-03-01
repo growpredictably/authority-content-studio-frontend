@@ -1,13 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ExternalLink, ChevronDown } from "lucide-react";
+import { ExternalLink, ChevronDown, Pencil } from "lucide-react";
+import { EditKnowledgeDrawer } from "./edit-knowledge-drawer";
 import type { ExternalKnowledge } from "@/lib/api/types";
 
 interface KnowledgeCardProps {
@@ -31,10 +34,12 @@ const endorsementStyles: Record<
 };
 
 export function KnowledgeCard({ item }: KnowledgeCardProps) {
+  const [editOpen, setEditOpen] = useState(false);
   const endorsement = endorsementStyles[item.endorsement_level] ??
     endorsementStyles.reference;
 
   return (
+    <>
     <Collapsible>
       <Card>
         <CardContent className="pt-4">
@@ -47,6 +52,17 @@ export function KnowledgeCard({ item }: KnowledgeCardProps) {
                 </p>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditOpen(true);
+                  }}
+                >
+                  <Pencil className="h-3 w-3" />
+                </Button>
                 <Badge className={endorsement.className}>
                   {endorsement.label}
                 </Badge>
@@ -124,5 +140,11 @@ export function KnowledgeCard({ item }: KnowledgeCardProps) {
         </CardContent>
       </Card>
     </Collapsible>
+    <EditKnowledgeDrawer
+      knowledge={item}
+      open={editOpen}
+      onOpenChange={setEditOpen}
+    />
+    </>
   );
 }

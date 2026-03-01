@@ -2,9 +2,11 @@
 
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthor } from "@/hooks/use-author";
 import { useAuthors, useSetPrimaryAuthor } from "@/lib/api/hooks/use-authors";
+import { useWorkflowPreferences } from "@/hooks/use-workflow-preferences";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,14 +16,20 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Moon, Sun, LogOut, User, ChevronDown, Star } from "lucide-react";
+import { Moon, Sun, LogOut, User, ChevronDown, Star, Mic } from "lucide-react";
 import { MobileNav } from "./mobile-nav";
+
+function formatAuthorLabel(name: string, archetype?: string | null) {
+  if (!archetype || archetype === "general") return name;
+  return `${name} · ${archetype}`;
+}
 
 export function Topbar() {
   const { theme, setTheme } = useTheme();
-  const { author } = useAuthor();
+  const { author, hasNoAuthors } = useAuthor();
   const { data: authorsData } = useAuthors();
   const setPrimary = useSetPrimaryAuthor();
+  const { setLastAuthorId } = useWorkflowPreferences();
   const router = useRouter();
   const supabase = createClient();
   const authors = authorsData?.authors ?? [];
@@ -31,6 +39,13 @@ export function Topbar() {
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
+  }
+
+  function handleSwitchAuthor(authorId: string) {
+    if (authorId !== author?.id) {
+      setLastAuthorId(authorId);
+      setPrimary.mutate(authorId);
+    }
   }
 
   const initials = author?.name
@@ -46,11 +61,19 @@ export function Topbar() {
     <header className="flex h-14 items-center justify-between border-b bg-background px-4">
       <div className="flex items-center gap-2">
         <MobileNav />
-        {hasMultipleAuthors ? (
+        {hasNoAuthors ? (
+          <Link
+            href="/onboarding"
+            className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors hidden sm:flex"
+          >
+            <Mic className="h-3.5 w-3.5" />
+            Set up your first voice
+          </Link>
+        ) : hasMultipleAuthors ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground hidden sm:flex">
-                {author?.name ?? "Loading..."}
+                {author ? formatAuthorLabel(author.name, author.archetype) : "Loading..."}
                 <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
@@ -58,24 +81,32 @@ export function Topbar() {
               {authors.map((a) => (
                 <DropdownMenuItem
                   key={a.id}
-                  onClick={() => {
-                    if (a.id !== author?.id) setPrimary.mutate(a.id);
-                  }}
+                  onClick={() => handleSwitchAuthor(a.id)}
                   className="gap-2"
                 >
                   {a.is_primary && <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />}
                   {!a.is_primary && <span className="w-3" />}
                   <span className={a.id === author?.id ? "font-medium" : ""}>
-                    {a.name}
+                    {formatAuthorLabel(a.name, a.archetype)}
                   </span>
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/voice" className="gap-2">
+                  <Mic className="h-3 w-3" />
+                  Voice DNA
+                </Link>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <h1 className="text-sm font-medium text-muted-foreground hidden sm:block">
-            {author?.name ?? "Loading..."}
-          </h1>
+          <Link
+            href="/voice"
+            className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
+          >
+            {author ? formatAuthorLabel(author.name, author.archetype) : "Loading..."}
+          </Link>
         )}
       </div>
 

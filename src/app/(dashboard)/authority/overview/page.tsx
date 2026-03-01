@@ -11,6 +11,9 @@ import {
   Activity,
   ArrowRight,
   Search,
+  Mic,
+  Layers,
+  Users,
 } from "lucide-react";
 import { useAuthor } from "@/hooks/use-author";
 import { AuthorSelector } from "@/components/shared/author-selector";
@@ -58,6 +61,32 @@ export default function AuthorityOverviewPage() {
       ) : (
         <>
           {author && <AuthorityScore authorId={author.id} />}
+
+          {/* Quick-action navigation cards */}
+          <div className="grid gap-4 sm:grid-cols-3">
+            {[
+              { title: "Voice Builder", desc: "Build and refine your voice DNA", href: "/voice", icon: Mic },
+              { title: "Frameworks", desc: "Manage your signature methodologies", href: "/authority/frameworks", icon: Layers },
+              { title: "Target Audience", desc: "Define and refine your ICPs", href: "/authority/icps", icon: Users },
+            ].map((card) => (
+              <Link key={card.href} href={card.href}>
+                <Card className="group hover:border-primary/50 transition-colors cursor-pointer">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-md bg-primary/10 p-2">
+                        <card.icon className="h-4 w-4 text-primary" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{card.title}</p>
+                        <p className="text-xs text-muted-foreground">{card.desc}</p>
+                      </div>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
 
           {/* Quick stats from packets only (no expensive gap analysis) */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

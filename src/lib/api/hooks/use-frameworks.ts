@@ -81,3 +81,66 @@ export function useDeleteFramework() {
     },
   });
 }
+
+/** Reorder frameworks by providing an ordered list of IDs. */
+export function useReorderFrameworks() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      authorId,
+      orderedIds,
+    }: {
+      authorId: string;
+      orderedIds: string[];
+    }) => {
+      const token = await getToken();
+      return apiPatch<{ success: boolean }>(
+        "/v1/frameworks/reorder",
+        { author_id: authorId, ordered_ids: orderedIds },
+        token
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["frameworks"] });
+    },
+  });
+}
+
+/** List predefined frameworks available for import. */
+export function usePredefinedFrameworks() {
+  return useQuery({
+    queryKey: ["predefined-frameworks"],
+    queryFn: async () => {
+      const token = await getToken();
+      return apiGet<FrameworkListResponse>("/v1/frameworks/library", token);
+    },
+    staleTime: 30 * 60 * 1000,
+  });
+}
+
+/** Import a predefined framework into the user's brand. */
+export function useImportFramework() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      authorId,
+      predefinedFrameworkId,
+    }: {
+      authorId: string;
+      predefinedFrameworkId: string;
+    }) => {
+      const token = await getToken();
+      return apiCall<BrandFramework>(
+        "/v1/frameworks/import",
+        {
+          author_id: authorId,
+          predefined_framework_id: predefinedFrameworkId,
+        },
+        token
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["frameworks"] });
+    },
+  });
+}
