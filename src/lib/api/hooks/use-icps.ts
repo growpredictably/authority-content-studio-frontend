@@ -49,6 +49,7 @@ export function useCreateICP() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["icps"] });
+      queryClient.invalidateQueries({ queryKey: ["icp-detail"] });
     },
   });
 }
@@ -89,6 +90,7 @@ export function useGenerateICP() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["icps"] });
+      queryClient.invalidateQueries({ queryKey: ["icp-detail"] });
     },
   });
 }
@@ -106,6 +108,7 @@ export function useDeleteICP() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["icps"] });
+      queryClient.invalidateQueries({ queryKey: ["icp-detail"] });
     },
   });
 }
