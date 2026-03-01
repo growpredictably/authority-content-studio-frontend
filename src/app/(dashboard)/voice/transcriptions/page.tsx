@@ -553,7 +553,7 @@ export default function TranscriptionsPage() {
       enrichFramework.mutate(
         {
           frameworkId: enrichTargetId,
-          transcriptionId: frameworkTarget.id,
+          transcriptionIds: [frameworkTarget.id],
           authorId: author.id,
           useBatch,
         },
