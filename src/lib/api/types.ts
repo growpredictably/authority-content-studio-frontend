@@ -257,11 +257,25 @@ export interface LeverageMetrics {
   leverage_message: string;
 }
 
+export interface AssetReadiness {
+  packet_id: string;
+  theme: string;
+  stage: "draft" | "calibrating" | "ready";
+  coherence_score: number;
+  missing_elements: string[];
+  progress_percent: number;
+  blocking_reason: string | null;
+}
+
 export interface LeverageResponse {
   success: boolean;
   author_id: string;
   metrics: LeverageMetrics;
-  packet_flow: { total_packets: number; by_stage: Record<string, number> };
+  packet_flow: {
+    total_packets: number;
+    by_stage: Record<string, number>;
+    packets: AssetReadiness[];
+  };
   generated_at: string;
 }
 

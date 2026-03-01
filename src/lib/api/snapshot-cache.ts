@@ -12,18 +12,30 @@ interface SnapshotRow {
 /**
  * Fetch a valid (not expired, actions remaining) snapshot from Supabase.
  * Returns the cached payload or null if no valid snapshot exists.
+ * When beliefContext is provided, filters on the belief_context column.
  */
 export async function getSnapshot<T>(
   authorId: string,
-  snapshotType: string
+  snapshotType: string,
+  beliefContext?: string | null
 ): Promise<T | null> {
   const supabase = createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from(TABLE)
     .select("snapshot_data, actions_pending, expires_at")
     .eq("author_id", authorId)
-    .eq("snapshot_type", snapshotType)
-    .maybeSingle<SnapshotRow>();
+    .eq("snapshot_type", snapshotType);
+
+  if (beliefContext) {
+    query = query.eq("belief_context", beliefContext);
+  } else if (beliefContext === undefined) {
+    // Caller didn't pass beliefContext — don't filter (backward-compat)
+  } else {
+    // Explicit null — match rows where belief_context IS NULL
+    query = query.is("belief_context", null);
+  }
+
+  const { data, error } = await query.maybeSingle<SnapshotRow>();
 
   if (error || !data) return null;
 
@@ -37,7 +49,8 @@ export async function getSnapshot<T>(
 
 /**
  * Cache a response in the snapshots table.
- * Uses upsert on the unique (user_id, author_id, snapshot_type) tuple.
+ * Uses delete + insert to handle the functional unique index
+ * (user_id, author_id, snapshot_type, COALESCE(belief_context, '')).
  */
 export async function upsertSnapshot(
   userId: string,
@@ -45,25 +58,39 @@ export async function upsertSnapshot(
   snapshotType: string,
   data: unknown,
   actionsPending: number,
-  ttlHours: number
+  ttlHours: number,
+  beliefContext?: string | null
 ): Promise<void> {
   const supabase = createClient();
   const expiresAt = new Date(
     Date.now() + ttlHours * 60 * 60 * 1000
   ).toISOString();
 
-  await supabase.from(TABLE).upsert(
-    {
-      user_id: userId,
-      author_id: authorId,
-      snapshot_type: snapshotType,
-      snapshot_data: data,
-      actions_pending: actionsPending,
-      expires_at: expiresAt,
-      created_at: new Date().toISOString(),
-    },
-    { onConflict: "user_id,author_id,snapshot_type" }
-  );
+  // Delete existing snapshot for this exact tuple (RLS scopes to current user)
+  let deleteQuery = supabase
+    .from(TABLE)
+    .delete()
+    .eq("author_id", authorId)
+    .eq("snapshot_type", snapshotType);
+
+  if (beliefContext) {
+    deleteQuery = deleteQuery.eq("belief_context", beliefContext);
+  } else {
+    deleteQuery = deleteQuery.is("belief_context", null);
+  }
+  await deleteQuery;
+
+  // Insert fresh snapshot
+  await supabase.from(TABLE).insert({
+    user_id: userId,
+    author_id: authorId,
+    snapshot_type: snapshotType,
+    snapshot_data: data,
+    actions_pending: actionsPending,
+    belief_context: beliefContext || null,
+    expires_at: expiresAt,
+    created_at: new Date().toISOString(),
+  });
 }
 
 /**
