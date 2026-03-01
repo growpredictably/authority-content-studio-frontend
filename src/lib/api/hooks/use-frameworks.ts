@@ -30,6 +30,22 @@ export function useFrameworks(authorId: string | undefined) {
   });
 }
 
+/** Fetch a single framework by ID. */
+export function useFramework(frameworkId: string | undefined) {
+  return useQuery({
+    queryKey: ["framework", frameworkId],
+    queryFn: async () => {
+      const token = await getToken();
+      return apiGet<BrandFramework>(
+        `/v1/frameworks/${frameworkId}`,
+        token
+      );
+    },
+    enabled: !!frameworkId,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
 /** Create a new framework. */
 export function useCreateFramework() {
   const queryClient = useQueryClient();
@@ -40,6 +56,7 @@ export function useCreateFramework() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["frameworks"] });
+      queryClient.invalidateQueries({ queryKey: ["framework"] });
     },
   });
 }
@@ -61,6 +78,7 @@ export function useUpdateFramework() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["frameworks"] });
+      queryClient.invalidateQueries({ queryKey: ["framework"] });
     },
   });
 }
@@ -78,6 +96,7 @@ export function useDeleteFramework() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["frameworks"] });
+      queryClient.invalidateQueries({ queryKey: ["framework"] });
     },
   });
 }
@@ -102,6 +121,7 @@ export function useReorderFrameworks() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["frameworks"] });
+      queryClient.invalidateQueries({ queryKey: ["framework"] });
     },
   });
 }
@@ -141,6 +161,7 @@ export function useImportFramework() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["frameworks"] });
+      queryClient.invalidateQueries({ queryKey: ["framework"] });
     },
   });
 }

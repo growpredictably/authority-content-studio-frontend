@@ -38,6 +38,7 @@ export function useExtractFramework() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["frameworks"] });
+      queryClient.invalidateQueries({ queryKey: ["framework"] });
     },
   });
 }
@@ -67,6 +68,7 @@ export function useEnrichFramework() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["frameworks"] });
+      queryClient.invalidateQueries({ queryKey: ["framework"] });
     },
   });
 }
